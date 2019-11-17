@@ -40,7 +40,7 @@ main<-function(){
   # Load the dataset
   global_terrorism <- read.csv(DATASET_FILENAME)
   
-  # Include incidents after 1997, where all incidents represent an act of terrorism 
+  # Includes only incidents after 1997, where all incidents represent an act of terrorism 
   after_1997 <- global_terrorism[global_terrorism$iyear >= 1997 & global_terrorism$doubtterr== 0,]
   
   refined <- data.frame("Event_Id" = after_1997$eventid,
@@ -77,6 +77,22 @@ main<-function(){
   )
   
   #print(str(refined))
+  
+  
+  # ************************************************
+  # Plot missing values count for each variable of the 'refined' dataset
+  
+  options(repr.plot.width=6, repr.plot.height=8)
+  missing_data <- refined %>% summarise_all(funs(sum(is.na(.))/n()))
+  missing_data <- gather(missing_data, key = "variables", value = "percent_missing") 
+  
+  plot_missing <- ggplot(missing_data, aes(x = reorder(variables, percent_missing), y = percent_missing)) +
+  geom_bar(stat = "identity", fill = "lightblue", aes(color = I('white')), size = 0.1)+coord_flip()+ theme_few()+ 
+  ggtitle("Missing values in refined dataset") + labs(x = "Variables", y = "% of missing values")
+  
+  print(plot_missing)
+  
+  # ************************************************
   
   # ************************************************
   # Data Cleaning
