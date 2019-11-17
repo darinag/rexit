@@ -1,0 +1,9 @@
+# RStudio files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+#Dataset
+globalterrorismdb_0718dist.csv
+
