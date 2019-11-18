@@ -8,7 +8,8 @@ Sys.setenv(TZ="Europe/London")
 # ************************************************
 #   Global Environment variables
 
-DATASET_FILENAME = "globalterrorismdb_0718dist.csv"
+DATASET_FILENAME = "C:/Users/cc01030/OneDrive - University of Surrey/Documents/GitHub/rexit/globalterrorismdb_0718dist.csv"
+
 
 # Load the libraries used in the project
 library(readr)
@@ -82,15 +83,15 @@ main<-function(){
   # ************************************************
   # Plot missing values count for each variable of the 'refined' dataset
   
-  options(repr.plot.width=6, repr.plot.height=8)
-  missing_data <- refined %>% summarise_all(funs(sum(is.na(.))/n()))
-  missing_data <- gather(missing_data, key = "variables", value = "percent_missing") 
+  #options(repr.plot.width=6, repr.plot.height=8)
+  #missing_data <- refined %>% summarise_all(funs(sum(is.na(.))/n()))
+  #missing_data <- gather(missing_data, key = "variables", value = "percent_missing") 
   
-  plot_missing <- ggplot(missing_data, aes(x = reorder(variables, percent_missing), y = percent_missing)) +
-  geom_bar(stat = "identity", fill = "lightblue", aes(color = I('white')), size = 0.1)+coord_flip()+ theme_few()+ 
-  ggtitle("Missing values in refined dataset") + labs(x = "Variables", y = "% of missing values")
+  #plot_missing <- ggplot(missing_data, aes(x = reorder(variables, percent_missing), y = percent_missing)) +
+  #geom_bar(stat = "identity", fill = "lightblue", aes(color = I('white')), size = 0.1)+coord_flip()+ theme_few()+ 
+  #ggtitle("Missing values in refined dataset") + labs(x = "Variables", y = "% of missing values")
   
-  print(plot_missing)
+  #print(plot_missing)
   
   # ************************************************
   
@@ -118,7 +119,7 @@ main<-function(){
   
   plot_attacks_by_year <- hchart(after_1997$iyear, name = "Attacks Count", color = "lightblue") %>%
   hc_title(text = "Terror incidents by year (1997-2017)") %>%
-  hc_add_theme(hc_theme_db())
+  hc_add_theme(hc_theme_flatdark())
   
   print(plot_attacks_by_year)
   
