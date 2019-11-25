@@ -57,7 +57,19 @@ data <- data[,colIndexes]
 no_doubt <- data[data$doubtterr==0,]
 df <- no_doubt[no_doubt$iyear >= 1997,]
 gname <- df$gname
-motive <- df$motive
+#motive <- df$motive
+
+regex <- '(\\([A-Z]+\\))'
+
+gname <- sapply(gname, function(x) {
+  if(!is.na(x) && str_detect(x, regex)) {
+    x<-str_extract(x, regex)
+    x<-gsub("(", "", x, fixed = TRUE)
+    x<-gsub(")", "", x, fixed = TRUE)
+    
+  }
+  gsub(" ", "", x, fixed = TRUE)
+})
 
 text <- paste(gname, collapse=' ')
 
@@ -91,7 +103,7 @@ createWordCloud <- function(text, myStopwords) {
   d <- data.frame(word = names(v),freq=v)
   head(d, 10)
   wordcloud(words = d$word, freq = d$freq, min.freq = 1,
-            max.words=200, random.order=FALSE, rot.per=0.35, 
+            max.words=50, random.order=FALSE, rot.per=0.35, 
             colors=brewer.pal(8, "Dark2"))
   
   #barplot(d[1:10,]$freq, las = 2, names.arg = d[1:10,]$word,
@@ -100,4 +112,4 @@ createWordCloud <- function(text, myStopwords) {
 
 }
 
-createWordCloud(text, c("motive", "specific", "however", "sources", "unknown"))
+createWordCloud(text, c("unknown"))
