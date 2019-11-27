@@ -19,7 +19,7 @@ library(tidyverse)
 library(plotly)
 library(DT)
 library(highcharter)
-
+library(treemap)
 
 
 
@@ -121,9 +121,24 @@ main<-function(){
   hc_title(text = "Terror incidents by year (1997-2017)") %>%
   hc_add_theme(hc_theme_flatdark())
   
-  print(plot_attacks_by_year)
+  #print(plot_attacks_by_year)
   
-  # Plot the distribution of attack types
+  
+  
+  # Plot the distribution of attack types as a bar chart
+  plot_attack_type_bar <-after_1997 %>%
+    filter(!is.na(attacktype1_txt)) %>%
+    count(attacktype1_txt)%>%
+    arrange(n)%>%
+    hchart(type = "bar",color = "lightblue", hcaes(x = attacktype1_txt, y = n)) %>%
+    hc_title(text = "Distribution of attack types") %>%
+    hc_xAxis(title = list(text = "Type of Attack")) %>%
+    hc_yAxis(title = list(text = "Count")) %>%
+    hc_add_theme(hc_theme_flatdark())
+  
+  #print(plot_attack_type_bar)
+  
+  
   #plot_attack_type <- ggplot(data = after_1997, aes(x = after_1997$attacktype1_txt)) + 
   #theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   #theme_gray() +
