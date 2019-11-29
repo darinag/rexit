@@ -1,96 +1,14 @@
-
-# Clear all objects in "global environment"
-rm(list=ls())
-
-# Set the timezone
-Sys.setenv(TZ="Europe/London")
-
 # ************************************************
-#   Global Environment variables
-
-DATASET_FILENAME = "globalterrorismdb_0718dist.csv"
-
-
-# Load the libraries used in the project
-library(readr)
-library(ggplot2)
-library(dplyr)
-library(tidyverse)
-library(plotly)
-library(DT)
-library(highcharter)
-library(treemap)
-library(viridis)
-library(h2o)
-library(keras)
-library(pROC)
-library(formattable)
-               
-
-# Load the dataset
-global_terrorism <- read.csv(DATASET_FILENAME)
-
-# Includes only incidents after 1997, where all incidents represent an act of terrorism 
-after_1997 <- global_terrorism[global_terrorism$iyear >= 1997 & global_terrorism$doubtterr== 0,]
-
-refined <- data.frame(
-  "Country" = after_1997$country,
-  "Criteria1" = after_1997$crit1,
-  "Criteria2" = after_1997$crit2,
-  "Criteria3" = after_1997$crit3,
-  "Attack_Type" = after_1997$attacktype1,
-  "Successful" = after_1997$success,
-  "Suicide" = after_1997$suicide,
-  "Weapon_Type" = after_1997$weaptype1,
-  "Target_Type" = after_1997$targtype1,
-  "Perpetrators_Number" = after_1997$nperps
-)
-
-########NEURAL NETWORK#########
-OUTPUT_FIELD      <- "Successful"             # Field name of the output class to predict
-
-# These are the data preparation values
-
-HOLDOUT           <- 70                   # % split to create TRAIN dataset
-
-# Cutoff values - you can experiment with these
-
-CUTOFF_OUTLIER    <- 0.99                 # Confidence p-value for outlier detection
-# Set to negative means analyse but do not replace outliers
-CUTOFF_DISCREET   <- 5                    # Number of empty bins to determine discreet
-CUTOFF_REDUNDANT  <- 0.95                 # Linear correlation coefficient cut-off
-
-# Indicates the type of each field
-
-TYPE_DISCREET     <- "DISCREET"           # field is discreet (numeric)
-TYPE_ORDINAL      <- "ORDINAL"            # field is continuous numeric
-TYPE_SYMBOLIC     <- "SYMBOLIC"           # field is a string
-TYPE_NUMERIC      <- "NUMERIC"            # field is initially a numeric
-TYPE_IGNORE       <- "IGNORE"             # field is not encoded
-
-MAX_LITERALS      <- 55                    # Maximum numner of 1-hot-encoding fields
-
-# These are the supervised model constants
-
-PDF_FILENAME      <- "tree.pdf"           # Name of PDF with graphical tree diagram
-RULES_FILENAME    <- "rules.txt"          # Name of text file with rules saved
-RESULTS_FILENAME  <- "results.csv"        # Name of the CSV results file
-NODE_LEVEL        <- 1                    # The number is the node level of the tree to print
-BOOST             <- 20                   # Number of boosting iterations. 1=single model
-FOREST_SIZE       <- 1000                 # Number of trees in the forest
-SCALE_DATASET     <- TRUE                 # Set to true to scale dataset before ML stage
-
-BASICNN_HIDDEN    <- 10                   # 10 hidden layer neurons
-BASICNN_EPOCHS    <- 100                  # Maximum number of training epocs
-
-# See https://cran.r-project.org/web/packages/h2o/h2o.pdf
-
-DEEP_HIDDEN       <- c(5,5)               # Number of neurons in each layer
-DEEP_STOPPING     <- 2                    # Number of times no improvement before stop
-DEEP_TOLERANCE    <- 0.01                 # Error threshold
-DEEP_ACTIVATION   <- "TanhWithDropout"    # Non-linear activation function
-DEEP_REPRODUCABLE <- TRUE 
-
+# NPREPROCESSING_splitdataset() :
+#
+# Randomise and split entire data set
+#
+# INPUT: data Frame - combinedML - dataset
+#
+# OUTPUT : data Frame - test dataset
+#          data Frame - train dataset
+# 241019 use the global HOLDOUT
+# ************************************************
 NPREPROCESSING_splitdataset<-function(combinedML){
   
   # **** Create a TRAINING dataset using HOLDOUT % of the records
@@ -109,6 +27,20 @@ NPREPROCESSING_splitdataset<-function(combinedML){
   return(retList)
 }
 
+# ************************************************
+# NEvaluateClassifier() :
+#
+# Use dataset to generate predictions from model
+# Evaluate as classifier using threshold value
+#
+# INPUT   :   vector double     - probs        - probability of being class 1
+#             Data Frame        - testing_data - Dataset to evaluate
+#             double            - threshold     -cutoff (probability) for classification
+#
+# OUTPUT  :   List       - Named evaluation measures
+#                        - Predicted class probability
+#
+# ************************************************
 NEvaluateClassifier<-function(test_predicted,test_expected,threshold) {
   
   predictedClass<-ifelse(test_predicted<threshold,0,1)
@@ -119,6 +51,16 @@ NEvaluateClassifier<-function(test_predicted,test_expected,threshold) {
   return(results)
 } #endof NEvaluateClassifier()
 
+
+# ************************************************
+# N_DEEP_Initialise()
+# Initialise the H2O server
+#
+# INPUT:
+#         Bool       - reproducible       - TRUE if model must be reproducable each run
+#
+# OUTPUT : none
+# ************************************************
 N_DEEP_Initialise<-function(reproducible=FALSE){
   
   library(h2o)
@@ -138,6 +80,21 @@ N_DEEP_Initialise<-function(reproducible=FALSE){
   #h2o.no_progress()
 }
 
+# ************************************************
+# N_DEEP_TrainClassifier()
+#
+# h2O NEURAL NETWORK : DEEP LEARNING CLASSIFIER TRAIN
+#
+# INPUT:  Frame      - train              - scaled [0.0,1.0], fields & rows
+#         String     - fieldNameOutput    - Name of the field to classify
+#         Int Vector - hidden             - Number of hidden layer neurons for each layer
+#         int        - stopping_rounds    - Number of times no improvement before stop
+#         double     - stopping_tolerance - Error threshold
+#         String     - activation         - Name of activation function
+#         Bool       - reproducible       - TRUE if model must be reproducable each run
+#
+# OUTPUT: object     - trained neural network
+# ************************************************
 N_DEEP_TrainClassifier<- function(train,
                                   fieldNameOutput,
                                   hidden,
@@ -185,6 +142,22 @@ N_DEEP_TrainClassifier<- function(train,
   return(deep)
 }
 
+# ************************************************
+# N_EVALUATE_DeepNeural() :
+#
+# Evaluate Deep Neural Network classifier
+# Generates probabilities from the classifier
+#
+# INPUT: Data Frame    -  test             - scaled [0.0,1.0], fields & rows
+#        String        -  fieldNameOutput  - Name of the field that we are training on (i.e.Status)
+#        Object         - deep             - trained NN including the learn weights, etc.
+#         boolean      - plot              - TRUE = output charts/results
+#         string       - myTitle           - title on results
+#
+# OUTPUT :
+#         list - metrics from confusion matrix
+# ************************************************
+# Uses   library(h2o)
 N_EVALUATE_DeepNeural<-function(test,fieldNameOutput, deep,plot,myTitle){
   
   #Creates the h2o test dataset
@@ -211,6 +184,18 @@ N_EVALUATE_DeepNeural<-function(test,fieldNameOutput, deep,plot,myTitle){
   return(measures)
 }
 
+# ************************************************
+# N_MLP_TrainClassifier()
+#
+# MLP NEURAL NETWORK
+#
+# INPUT:  Frame      - train              - scaled [0.0,1.0], fields & rows
+#         String     - fieldNameOutput    - Name of the field to classify
+#         Int Vector - hidden             - Number of hidden layer neurons for each layer
+#         boolean    - plot               - TRUE = output charts/results
+#
+# OUTPUT: object     - trained neural network
+# ************************************************
 N_MLP_TrainClassifier<- function(train,
                                  fieldNameOutput,
                                  hidden,
@@ -267,6 +252,21 @@ N_MLP_TrainClassifier<- function(train,
   return(mlp_classifier)
 }
 
+# ************************************************
+# N_EVALUATE_MLP() :
+#
+# Evaluate MLP Neural Network classifier
+# Generates probabilities from the classifier
+#
+# INPUT: Data Frame    -  testing_data     - scaled [0.0,1.0], fields & rows
+#        String        -  fieldNameOutput  - Name of the field that we are training on (i.e.Status)
+#        Object        - mlp_classifier    - trained NN including the learn weights, etc.
+#         boolean      - plot              - TRUE = output charts/results
+#         string       - myTitle           - title on results
+#
+# OUTPUT :
+#         list - metrics from confusion matrix
+# ************************************************
 N_evaluate_MLP<-function(test,fieldNameOutput,mlp_classifier,plot,myTitle){
   
   positionClassOutput<-which(names(test)==fieldNameOutput)
@@ -295,6 +295,27 @@ N_evaluate_MLP<-function(test,fieldNameOutput,mlp_classifier,plot,myTitle){
   return(measures)
 }
 
+# ************************************************
+# NdetermineThreshold() :
+#
+# For the range of threholds [0,1] calculate a confusion matrix
+# and classifier metrics.
+# Deterime "best" threshold based on either distance or Youdan
+# Plot threshold chart and ROC chart
+#
+# Plot the results
+#
+# INPUT   :   vector double  - probs        - probability of being class 1
+#         :   Data Frame     - testing_data - dataset to evaluate
+#         :   boolean        - plot         - TRUE=create charts otherwise don't
+#         :   string         - title        - string to plot as the chart title
+#
+# OUTPUT  :   List       - Named evaluation measures
+#                        - Predicted class probability
+#
+# Uses   library(pROC)
+# 241019NRT - added plot flag and title for charts
+# ************************************************
 NdetermineThreshold<-function(test_predicted,
                               test_expected,
                               plot=TRUE,
@@ -410,7 +431,7 @@ NdetermineThreshold<-function(test_predicted,
                     "% FPR: ",fpr,"%",sep="")
     
     text(x=analysis["specificity"],
-         y=analysis["sensitivity"], adj = c(-0.2,2),cex=1,
+         y=analysis["sensitivity"], adj = c(-0.2,-2),cex=1,
          col="red",annotate)
     
   } # endof if plotting
@@ -429,6 +450,30 @@ NdetermineThreshold<-function(test_predicted,
   return(results)
 } #endof myPerformancePlot()
 
+# ************************************************
+# NcalcConfusion() :
+#
+# Calculate a confusion matrix for 2-class classifier
+# INPUT: vector - expectedClass  - {0,1}, Expected outcome from each row (labels)
+#        vector - predictedClass - {0,1}, Predicted outcome from each row (labels)
+#
+# OUTPUT: A list with the  entries from NcalcMeasures()
+#
+# 070819NRT convert values to doubles to avoid integers overflowing
+# Updated to the following definition of the confusion matrix
+#
+# A good loan is indicated when $Status=1 and bad when $Status=0
+
+#                    ACTUAL
+#               ------------------
+# PREDICTED     GOOD=1   |  BAD=0
+#               ------------------
+#     GOOD=1      TP     |    FP
+#               ==================
+#     BAD=0       FN     |    TN
+#
+#
+# ************************************************
 NcalcConfusion<-function(expectedClass,predictedClass){
   
   confusion<-table(factor(predictedClass,levels=0:1),factor(expectedClass,levels=0:1))
@@ -444,6 +489,28 @@ NcalcConfusion<-function(expectedClass,predictedClass){
   
 } #endof NcalcConfusion()
 
+# ************************************************
+# NcalcMeasures() :
+#
+# Evaluation measures for a confusion matrix
+#
+# INPUT: numeric  - TP, FN, FP, TN
+#
+# OUTPUT: A list with the following entries:
+#        TP        - double - True Positive records
+#        FP        - double - False Positive records
+#        TN        - double - True Negative records
+#        FN        - double - False Negative records
+#        accuracy  - double - accuracy measure
+#        pgood     - double - precision for "good" (values are 1) measure
+#        pbad      - double - precision for "bad" (values are 1) measure
+#        FPR       - double - FPR measure
+#        TPR       - double - FPR measure
+#        TNR       - double - TNR measure
+#        MCC       - double - Matthew's Correlation Coeficient
+#
+# 080819NRT added TNR measure
+# ************************************************
 NcalcMeasures<-function(TP,FN,FP,TN){
   
   retList<-list(  "TP"=TP,
@@ -461,6 +528,19 @@ NcalcMeasures<-function(TP,FN,FP,TN){
   return(retList)
 }
 
+# ************************************************
+# NprintMeasures()
+#
+# Output measures to the Viewer
+#
+# INPUT:    list -   results - results from NcalcConfusion()
+#           string - title   - title of the table
+#
+# OUTPUT :  NONE
+#
+# 070819NRT updated to output table to viewer only
+# 171019NRT added column name "Metric"
+# 241019NRT added title
 NprintMeasures<-function(results,title){
   
   #This outputs our results into the "Viewer" in RStudio
@@ -474,54 +554,3 @@ NprintMeasures<-function(results,title){
     FP = formatter("span",style = x ~ style(color = "black"),~sprintf("%.0f",FP))))
   print(t)
 }
-
-
-original<-NPREPROCESSING_splitdataset(refined)
-
-
-mlpNeural<-function(train,test, plot=TRUE){
-  
-  myTitle<-paste("Preprocessed Dataset. MLP. Hidden=",BASICNN_HIDDEN,sep="")
-  print(myTitle)
-  
-  # Set to TRUE to use the h2o library
-  # otheriwse FALSE to try to use the Keras library
-  
-  if (TRUE) {
-    N_DEEP_Initialise()
-    
-    mlp_classifier<-N_DEEP_TrainClassifier(train=train,
-                                           fieldNameOutput=OUTPUT_FIELD,
-                                           hidden=BASICNN_HIDDEN,
-                                           stopping_rounds=DEEP_STOPPING,
-                                           stopping_tolerance=DEEP_TOLERANCE,
-                                           activation=DEEP_ACTIVATION,
-                                           reproducible=DEEP_REPRODUCABLE)
-    
-    plot(mlp_classifier,metric="classification_error")
-    
-    # Evaluate the deep NN as we have done previously
-    measures<-N_EVALUATE_DeepNeural(test=test,
-                                    fieldNameOutput=OUTPUT_FIELD,
-                                    deep=mlp_classifier,
-                                    plot=plot,
-                                    myTitle = myTitle)
-  } else {
-    
-    mlp_classifier<-N_MLP_TrainClassifier(train=train,
-                                          fieldNameOutput=OUTPUT_FIELD,
-                                          hidden=BASICNN_HIDDEN,
-                                          plot=plot)
-    
-    measures<-N_evaluate_MLP(test=test,
-                             fieldNameOutput=OUTPUT_FIELD,
-                             mlp_classifier=mlp_classifier,
-                             plot=plot,
-                             myTitle=myTitle)
-  } #endof if()
-  
-  return(measures)
-} #endof mlpNeural()
-
-measures<- mlpNeural(train=original$train, test=original$test)
-
