@@ -61,17 +61,6 @@ gname <- df$gname
 
 regex <- '(\\([A-Z]+\\))'
 
-gname <- sapply(gname, function(x) {
-  if(!is.na(x) && str_detect(x, regex)) {
-    x<-str_extract(x, regex)
-    x<-gsub("(", "", x, fixed = TRUE)
-    x<-gsub(")", "", x, fixed = TRUE)
-    
-  }
-  gsub(" ", "", x, fixed = TRUE)
-})
-
-text <- paste(gname, collapse=' ')
 
 createWordCloud <- function(text, myStopwords) {
   docs <- Corpus(VectorSource(text))
@@ -105,11 +94,6 @@ createWordCloud <- function(text, myStopwords) {
   wordcloud(words = d$word, freq = d$freq, min.freq = 1,
             max.words=50, random.order=FALSE, rot.per=0.35, 
             colors=brewer.pal(8, "Dark2"))
-  
-  #barplot(d[1:10,]$freq, las = 2, names.arg = d[1:10,]$word,
-  #        col ="lightblue", main ="Most frequent words",
-  #        ylab = "Word frequencies")
-
 }
 
 createWordCloud(text, c("unknown"))
