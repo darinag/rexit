@@ -400,26 +400,26 @@ main<-function(){
   # ************************************************
   # This is a sub-set frame of just the ordinal fields
 
-  #ordinals<-loans[,which(field_types1==TYPE_ORDINAL)]
+  ordinals<-loans[,which(field_types1==TYPE_DISCREET)]
 
   # Test if any ordinals are outliers and replace with mean values
   # Null hyposis is there are no outliers
   # We reject this if the p-value<significance (i.e. 0.05), confidence=95%
 
-  #ordinals<-NPREPROCESSING_outlier(ordinals=ordinals,confidence=OUTLIER_CONF)
+  ordinals<-NPREPROCESSING_outlier(ordinals=ordinals,confidence=OUTLIER_CONF)
 
   # ************************************************
   # z-scale
-  #zscaled<-as.data.frame(scale(ordinals,center=TRUE, scale=TRUE))
+  zscaled<-as.data.frame(scale(ordinals,center=TRUE, scale=TRUE))
 
   # In the choosen classifier, the input values need to be scaled to [0.0,1.0]
-  #ordinalReadyforML<-Nrescaleentireframe(zscaled)
+  ordinalReadyforML<-Nrescaleentireframe(zscaled)
 
   # ************************************************
   # We now have a frame of just the numeric fields, nice and ready for the ML
   catagoricalReadyforML<-NPREPROCESSING_categorical(dataset=loans,field_types=field_types1)
 
-  #print(formattable::formattable(data.frame(fields=names(catagoricalReadyforML))))
+  print(formattable::formattable(data.frame(fields=names(catagoricalReadyforML))))
 
   # number of non-numeric fields before transformation
   # 241019 which fields are either SYMBOLIC or DISCREET
@@ -434,7 +434,7 @@ main<-function(){
 
   # ************************************************
   # Combine the two sets of data that are read for ML
-  combinedML<-catagoricalReadyforML
+  combinedML<-cbind(catagoricalReadyforML, ordinalReadyforML)
 
   # Are any of the fields redundant?
   combinedML<-NPREPROCESSING_redundantFields(dataset=combinedML,cutoff=0.95)
@@ -458,6 +458,11 @@ main<-function(){
   # # ************************************************
   # 
   # myModelling(training_data = training_data, testing_data = testing_data)
+  # ************************************************
+  # ************************************************
+  
+ 
+  
 
 } #endof main()
 
