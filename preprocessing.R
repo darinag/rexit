@@ -11,7 +11,11 @@ MYLIBRARIES<-c("outliers",
                "PerformanceAnalytics",
                "dplyr",
                "anchors",
-               "corrplot")
+               "corrplot",
+               "outliers",
+               "eqs2lavaan",
+               "ggplot",
+               "tidyverse")
 
 OUTLIER_CONF      <- 0.95                 # Confidence p-value for outlier detection
 # Set to negative means analyse but do not replace outliers
@@ -75,7 +79,9 @@ NPREPROCESSING_prettyDataset<-function(dataset,...){
 
 
 
-  
+library(pacman)
+pacman::p_load(char=MYLIBRARIES,install=TRUE,character.only=TRUE)
+
 
   
   main_dataset <- read.csv(DATASET_FILENAME)
@@ -144,12 +150,11 @@ NPREPROCESSING_prettyDataset<-function(dataset,...){
   print(formattable::formattable(type_results))
   
   
-  #Regression to predict perpetrator numbers
-  
  
  
   #dataset_stats <- NPREPROCESSING_prettyDataset(post_feature_selection)
-# Group dataset by number of victims (how many attacks per number of killed)
+ 
+  #Group dataset by various fileds for data exploration purposes
   nkilled <- post_feature_selection %>% group_by(Kill_Count) %>% summarize(count=n())
   nwounded<- post_feature_selection %>% group_by(Wounded_Count) %>% summarize(count=n())
   nproperty<- post_feature_selection %>% group_by(Property_Damage) %>% summarize(count=n())
@@ -160,9 +165,7 @@ NPREPROCESSING_prettyDataset<-function(dataset,...){
   attack_type <- post_feature_selection %>% group_by(Attack_Type) %>% summarize(count=n())
   weapon_type <- post_feature_selection %>% group_by(Weapon_Type) %>% summarize(count=n())
   perp_number <-post_feature_selection %>% group_by(Perpetrators_Number) %>% summarize(count=n())
-  
-  
-  #nimpactful <- impactful_new %>% group_by(Impactful) %>% summarize(count=n())
+
   
   
   
@@ -202,36 +205,14 @@ NPREPROCESSING_prettyDataset<-function(dataset,...){
   nawounded <- dataset %>% group_by(Wounded_Count) %>% summarize(count=n())
   
 
-  post_feature_selection$Impactful=0
+  dataset$Impactful=0
   
   
   idx_killed <- which(colnames(post_feature_selection)=="Kill_Count")
   idx_wounded <- which(colnames(post_feature_selection)=="Wounded_Count")
   idx_prop_ext <- which(colnames(post_feature_selection)=="Property_Damage_Extent")
   idx_impact <- which(colnames(post_feature_selection)=="Impactful")
-  
-  
-# #Impactful logic
-# for (i in 1:nrow(post_feature_selection)){
-#   for (j in 1:ncol(post_feature_selection)){
-#     if (j==idx_killed){
-#       if (!is.na(post_feature_selection[i,j]) & post_feature_selection[i,j] > killed_threshold){
-#         post_feature_selection[i, idx_impact]=1
-#       }
-#     }
-#     else if (j==idx_wounded){
-#       if (!is.na(post_feature_selection[i,j]) & post_feature_selection[i,j] > wounded_threshold){
-#         post_feature_selection[i, idx_impact]=1
-#       }
-#     }
-#     else if (j==idx_prop_ext){
-#       if (!is.na(post_feature_selection[i,j]) & (post_feature_selection[i,j] == 1 | post_feature_selection[i,j] == 2)){
-#         post_feature_selection[i, idx_impact]=1
-#       }
-#     }
-#   }
-# }
-# 
+
   
   
   # Dataset for Correlation Matrix
@@ -239,8 +220,9 @@ NPREPROCESSING_prettyDataset<-function(dataset,...){
                                           "Wounded_Count" = dataset$Wounded_Count,
                                           "Perpetrator_Count" = dataset$Perpetrators_Number)
   
-  
-  filtered_dataset_for_cormat <- dataset_for_cormat %>% filter(!is.na(Perpetrator_Count))
+  filter_no99 <- replace.value(dataset_for_cormat, c("Perpetrator_Count"), from=-99, to=as.double(NA))
+  filter_no99 <- replace.value(filter_no99, c("Perpetrator_Count"), from=-9, to=as.double(NA))
+  filtered_dataset_for_cormat <- filter_no99 %>% filter(!is.na(Perpetrator_Count))
   testing_dataset_for_regression <- dataset_for_cormat %>% filter(is.na(Perpetrator_Count))
   
   library(corrplot)
@@ -249,6 +231,8 @@ NPREPROCESSING_prettyDataset<-function(dataset,...){
   #Correlation matrix
   correlation_matrix <- cormat(filtered_dataset_for_cormat)
   covariance_matrix <- cov(filtered_dataset_for_cormat)
+  
+  
   
   
   
@@ -261,19 +245,61 @@ NPREPROCESSING_prettyDataset<-function(dataset,...){
   plot(filtered_dataset_for_cormat$Perpetrator_Count, filtered_dataset_for_cormat$Wounded_Count, xlab="Perpetrator Count", ylab="Wounded Count", main="Wounded/Kill Count With Outliers")
   abline(lm( Perpetrator_Count ~ Wounded_Count, data=filtered_dataset_for_cormat), col="blue", lwd=3, lty=2)
   
+  x = filtered_dataset_for_cormat$Perpetrator_Count
+  OutVals = boxplot(x)
+  outliers = which( x %in% OutVals)
+  
+  perp_count_mean = round(mean(filtered_dataset_for_cormat$Perpetrator_Count))
+  
+  outlier_values <- boxplot.stats(filtered_dataset_for_cormat$Perpetrator_Count)$out
+  
+  IQRange = IQR(filtered_dataset_for_cormat$Perpetrator_Count)
+  boxplot()
+  
+  Min = min(filtered_dataset_for_cormat$Perpetrator_Count)
+  Max = max(filtered_dataset_for_cormat$Perpetrator_Count)
+  Median = median(filtered_dataset_for_cormat$Perpetrator_Count)
+  IQRange = IQR(filtered_dataset_for_cormat$Perpetrator_Count)
+  Lower_quantile = IQRange - 4
+  Upper_quantile = IQRange + 4
+  Lower_Outlier_Limit = Lower_quantile - 1.5 * IQRange
+  Upper_Outlier_Limit = Upper_quantile + 1.5 * IQRange
   
   
+  no_outliers <- impactful_new %>% mutate(Perpetrators_Number = case_when(Perpetrators_Number > 14 | Perpetrators_Number < -6 | is.na(Perpetrators_Number) ~ perp_count_mean, TRUE ~ as.double(Perpetrators_Number)))
+  perps_grouped<- no_outliers %>% group_by(Perpetrators_Number) %>% summarize(count=n())
+  impactful_grouped<- impactful_new %>% group_by(Impactful) %>% summarize(count=n())
+  NPREPROCESSING_prettyDataset(no_outliers)
+  
+  # Check covariance and correlation after outliers have been modified
+  no_outliers_filtered <- no_outliers %>% filter(!is.na(Perpetrators_Number))
+  perp_count_field <- no_outliers$Perpetrators_Number
+  kill_count_field <- no_outliers$Kill_Count
+  wounded_count_field <- no_outliers$Wounded_Count
   
   
+  correlation_dataframe <- data.frame("Perpetrators_Count"= perp_count_field,
+                                      "Kill_Count" = kill_count_field)
+                                      
+  
+  correlation_matrix_new <- cor.test(perp_count_field, kill_count_field, method="spearman", exact=FALSE)
+  
+  model <- lm(Perpetrators_Number ~ Kill_Count + Wounded_Count, data = no_outliers_filtered)
+  summary(model)
+  
+
+ 
   
   
+
   
-  #post_feature_selection_new <- na.omit(post_feature_selection, cols="Kill_Count")
+
   
   impactful_new <- dataset %>%mutate(Impactful = case_when(Kill_Count > killed_threshold | Wounded_Count > wounded_threshold | Property_Damage_Extent == 1 | Property_Damage_Extent == 2 ~ 1, TRUE  ~ 0))
+  write.csv(impactful_new,'preprocessed.csv')
+
   
-  #bfiltered_property_damage
-# Subset the data where number of killed is null to further analyse whether this data is useful for analysis
+ #Subset the data where number of killed is null to further analyse whether this data is useful for analysis
   killed_is_null <- subset(post_feature_selection, is.na(Kill_Count))
   wounded_is_null<- subset(post_feature_selection, is.na(Wounded_Count))
   wounded <- unique(killed_is_null$Wounded_Count)
@@ -286,19 +312,10 @@ NPREPROCESSING_prettyDataset<-function(dataset,...){
   
 
 
-# ************************************************
-# This is where R starts execution
-
-# clears the console area
-cat("\014")
-
-library(pacman)
-pacman::p_load(char=MYLIBRARIES,install=TRUE,character.only=TRUE)
-
-
 
 #Load additional R script files provide for this lab
 source("lab3dataPrep.R")
+source("lab2functions.R")
 
 set.seed(123)
 
