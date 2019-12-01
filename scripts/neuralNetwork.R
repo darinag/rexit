@@ -71,24 +71,40 @@ main<-function(){
   
   # Includes only incidents after 1997, where all incidents represent an act of terrorism 
   filteredDataset <- global_terrorism[global_terrorism$iyear >= 1997 & global_terrorism$doubtterr== 0,]
-  
-  readyForNN <- data.frame(
-    "Country" = filteredDataset$country, # TODO take from glossary and explain columns
-    "Criteria1" = filteredDataset$crit1, # 
-    "Criteria2" = filteredDataset$crit2,
-    "Criteria3" = filteredDataset$crit3,
-    "Attack_Type" = filteredDataset$attacktype1,
-    "Successful" = filteredDataset$success,
-    "Suicide" = filteredDataset$suicide,
-    "Weapon_Type" = filteredDataset$weaptype1,
-    "Target_Type" = filteredDataset$targtype1,
-    "Perpetrators_Number" = filteredDataset$nperps
+  attacks <- data.frame(
+    "Country" = filteredDataset$country,
+    "Country_Txt" = filteredDataset$country_txt,
+    "Region" = filteredDataset$region_txt,
+    "Attack_Type" = filteredDataset$attacktype1_txt,
+    "Weapon_Type" = filteredDataset$weaptype1_txt
   )
+  
+  # filter out empty fields before encoding
+  filteredDataset <- filteredDataset[!is.na(filteredDataset$country),]
+  filteredDataset <- filteredDataset[!is.na(filteredDataset$country_txt),]
+  filteredDataset <- filteredDataset[!is.na(filteredDataset$region_txt),]
+  filteredDataset <- filteredDataset[!is.na(filteredDataset$attacktype1_txt),]
+  filteredDataset <- filteredDataset[!is.na(filteredDataset$weaptype1_txt),]
+  
+  # get 15 countries most often victims of an attack
+  top15Countries <- filteredDataset %>% 
+    group_by(country) %>% 
+    summarise(n = n()) %>% 
+    arrange(desc(n)) %>% 
+    slice(1:15)
+  
+  countryVect <- top15Countries$country
+  
+  # filter out data to have only top 15 countries
+  filteredDataset <- filteredDataset[filteredDataset$country %in% countryVect,]
+  
+  readyForNN<-oneHotEncoding(attacks)
+  readyForNN$Successful <- filteredDataset$success
+  names(readyForNN)[names(readyForNN) == 'Weapon_Type_Vehiclenottoincludevehicleborneexplosivesiecarortruckbombs'] <- 'Weapon_Type_Vehicle_Not_Bomb'
   
   
   dataset_split<-NPREPROCESSING_splitdataset(readyForNN)
   measures<- neural_network(train=dataset_split$train, test=dataset_split$test)
-  
 }
 
 gc() # garbage collection to automatically release memory
@@ -123,6 +139,8 @@ pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)
 
 # load functions from the labs, all code written by Prof. Nick Ryman-Tubb
 source("scripts/labFunctions.R")
+
+source("scripts/oneHotEncoding.R")
 
 set.seed(123)
 
