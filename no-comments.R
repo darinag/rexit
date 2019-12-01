@@ -20,18 +20,14 @@ main<-function(){
   
   
   df <- data[data$iyear >= 1997,]
-  View(df$nkill)
-  print(range(df$nkill))
+
   #todo rename
-  df_filtered<-df[!(is.na(df$nkill)),]
-  df_naonly <- df[is.na(df$nkill),]
+  #df_filtered<-df[!(is.na(df$nkill)),]
+  #df_naonly <- df[is.na(df$nkill),]
 
   
-  df_filtered <- df_filtered[df$property != -9,]
-  #str(after_1997)
-  #standardDev <- sd(after_1997$imonth)
-  #print(standardDev)
-  #plot(after_1997$imonth)
+  #df_filtered <- df_filtered[df$property != -9,]
+ 
 }
 
 gc()
