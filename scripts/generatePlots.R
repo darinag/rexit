@@ -6,6 +6,7 @@ Sys.setenv(TZ="Europe/London")
 
 #   Global Environment variables
 DATASET_FILENAME = "data/globalterrorismdb_0718dist.csv"
+THRESHOLD_MISSING_VALUES = 0.25
 
 # ************************************************
 # main() :
@@ -28,8 +29,16 @@ main<-function(){
   plotAttackTypesTreemap(filteredDataset)
   plotDeadliestTerrOrgsBarChart(filteredDataset)
   plotMostActiveTerrOrgsTreemap(filteredDataset)
+  plotMissingValues(filteredDataset, THRESHOLD_MISSING_VALUES)
+  #plotFatalitiesByAttackType(filteredDataset)
+  plotMostLethalWeapons(filteredDataset)
+  plotCasualtiesByRegion(filteredDataset)
+  plotWoundedByRegion(filteredDataset)
+  plotWoundedByAttackType(filteredDataset)
+  plotAttackTypesByYear(filteredDataset)
+  plotExtentPropertyDamage(filteredDataset)
   
-  print("end of main")
+    print("end of main")
 }
 
 # specify libraries to be loaded by pacman
@@ -41,10 +50,13 @@ myLibraries<-c("readr",
                "plotly",
                "DT",
                "highcharter",
-               "treemap")
+               "treemap",
+               "viridis")
 
 library(pacman)
-pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)     
+pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)
+
+# Load libraries
 
 gc() # garbage collection to automatically release memory
 
