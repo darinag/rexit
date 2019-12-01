@@ -62,6 +62,160 @@ NPREPROCESSING_initialFieldType<-function(dataset){
 }
 
 # ************************************************
+# NPREPROCESSING_discreetNumeric() :
+#
+# Test NUMERIC field if DISCREET or ORDINAL
+#
+# INPUT: data frame      - dataset     - input data
+#        vector strings  - field_types - Types per field, either {NUMERIC, SYMBOLIC}
+#        int             - cutoff      - Number of empty bins needed to determine discreet (1-10)
+#
+# OUTPUT : vector strings - Updated with types per field {DISCREET, ORDINAL}
+# ************************************************
+# Uses histogram
+# Plots histogram for visulisation
+# ************************************************
+NPREPROCESSING_discreetNumeric<-function(dataset,field_types,cutoff){
+  
+  #For every field in our dataset
+  for(field in 1:(ncol(dataset))){
+    
+    #Only for fields that are all numeric
+    if (field_types[field]==TYPE_NUMERIC) {
+      
+      #Scale the whole field (column) to between 0 and 1
+      scaled_column<-Nrescale(dataset[,field])
+      
+      #Generate the "cutoff" points for each of 10 bins
+      #so we will get 0-0.1, 0.1-0.2...0.9-1.0
+      cutpoints<-seq(0,1,length=11)
+      
+      #This creates an empty vector that will hold the counts of ther numbers in the bin range
+      bins<-vector()
+      
+      #Now we count how many numbers fall within the range
+      #length(...) is used to count the numbers that fall within the conditional
+      for (i in 2:11){
+        bins<-append(bins,length(scaled_column[(scaled_column<=cutpoints[i])&(scaled_column>cutpoints[i-1])]))
+      }
+      
+      # the 10 bins will have a % value of the count (i.e. density)
+      bins<-(bins/length(scaled_column))*100.0
+      
+      graphTitle<-"AUTO:"
+      
+      #If the number of bins with less than 1% of the values is greater than the cutoff
+      #then the field is deterimed to be a discreet value
+      
+      if (length(which(bins<1.0))>cutoff)
+        field_types[field]<-TYPE_DISCREET
+      else
+        field_types[field]<-TYPE_ORDINAL
+      
+      #Bar chart helps visulisation. Type of field is the chart name
+      barplot(bins, main=paste(graphTitle,field_types[field]),
+              xlab=names(dataset[field]),
+              names.arg = 1:10,bty="n")
+      
+    } #endif numeric types
+  } #endof for
+  return(field_types)
+}
+
+# ************************************************
+# Nrescale() :
+#
+# These are the real values, that we scale between 0-1
+# i.e. x-min / (max-min)
+#
+# INPUT:   vector - input - values to scale
+#
+# OUTPUT : vector - scaled values to [0.0,1.0]
+# ************************************************
+Nrescale<-function(input){
+  
+  minv<-min(input)
+  maxv<-max(input)
+  return((input-minv)/(maxv-minv))
+}
+
+# ************************************************
+# Nrescaleentireframe() :
+#
+# Rescle the entire dataframe to [0.0,1.0]
+#
+# INPUT:   data frame - dataset - numeric data frame
+#
+# OUTPUT : data frame - scaled numeric data frame
+# ************************************************
+Nrescaleentireframe<-function(dataset){
+  
+  scaled<-sapply(as.data.frame(dataset),Nrescale)
+  return(scaled)
+}
+
+# ************************************************
+# NplotOutliers() :
+#
+# Scatter plot of field values and colours outliers in red
+#
+# INPUT: Vector - sorted    -  points to plot as literal values
+#        Vector - outliers  - list of above points that are considered outliers
+#        String - fieldName - name of field to plot
+#
+# OUTPUT : None
+# ************************************************
+NplotOutliers<-function(sorted,outliers,fieldName){
+  
+  plot(1:length(sorted),sorted,pch=1,xlab="Unique records",ylab=paste("Sorted values",fieldName),bty="n")
+  if (length(outliers)>0)
+    points(outliers,sorted[outliers],col="red",pch=19)
+}
+
+# ************************************************
+# NPREPROCESSING_outlier() :
+#
+# Determine if a value of a record is an outlier for each field
+#
+# INPUT:   data frame - ordinals   - numeric fields only
+#          double     - confidence - Confidence above which is determined an outlier [0,1]
+#                                  - Set to negative Confidence if NOT remove outliers
+#
+# OUTPUT : data frame - ordinals with any outlier values replaced with the median of the field
+# ************************************************
+# ChiSquared method
+# Uses   library(outliers)
+# https://cran.r-project.org/web/packages/outliers/outliers.pdf
+
+NPREPROCESSING_outlier<-function(ordinals,confidence){
+  
+  #For every ordinal field in our dataset
+  for(field in 1:(ncol(ordinals))){
+    
+    sorted<-unique(sort(ordinals[,field],decreasing=TRUE))
+    outliers<-which(outliers::scores(sorted,type="chisq",prob=abs(confidence)))
+    NplotOutliers(sorted,outliers,colnames(ordinals)[field])
+    
+    #If found records with outlier values
+    if ((length(outliers>0))){
+      
+      #070819NRT If confidence is positive then replace values with their means, otherwise do nothing
+      if (confidence>0){
+        outliersGone<-rm.outlier(ordinals[,field],fill=TRUE)
+        sorted<-unique(sort(outliersGone,decreasing=TRUE))
+        #NplotOutliers(sorted,vector(),colnames(ordinals)[field])
+        ordinals[,field]<-outliersGone #Put in the values with the outliers replaced by means
+        print(paste("Outlier field=",names(ordinals)[field],"Records=",length(outliers),"Replaced with MEAN"))
+      } else {
+        print(paste("Outlier field=",names(ordinals)[field],"Records=",length(outliers)))
+      }
+    }
+    
+  }
+  return(ordinals)
+}
+
+# ************************************************
 # NPLOT_correlagram() :
 #
 # Plots PLOT_correlagram

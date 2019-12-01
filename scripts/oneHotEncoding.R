@@ -43,27 +43,6 @@ main<-function(){
 
 oneHotEncoding <- function (attacks) {
   
-  # filter out empty fields before encoding
-  attacks <- attacks[!is.na(attacks$Country),]
-  attacks <- attacks[!is.na(attacks$Country_Txt),]
-  attacks <- attacks[!is.na(attacks$Region),]
-  attacks <- attacks[!is.na(attacks$Attack_Type),]
-  attacks <- attacks[!is.na(attacks$Weapon_Type),]
-  
-  # get 15 countries most often victims of an attack
-  top15Countries <- attacks %>% 
-    group_by(Country) %>% 
-    summarise(n = n()) %>% 
-    arrange(desc(n)) %>% 
-    slice(1:15)
-  
-  countryVect <- top15Countries$Country
-  
-  # filter out data to have only top 15 countries
-  attacks <- attacks[attacks$Country %in% countryVect,]
-  # remove country - numeric field
-  attacks <- select(attacks,-c("Country"))
-  
   field_types<-NPREPROCESSING_initialFieldType(attacks)
   
   results<-data.frame(field=names(attacks),initial=field_types,types1=field_types)

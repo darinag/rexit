@@ -14,6 +14,8 @@ Sys.setenv(TZ="Europe/London")
 # ************************************************
 OUTPUT_FIELD      <- "Successful"             # Field name of the output class to predict
 
+OUTLIER_CONF      <- 0.95                 # Confidence p-value for outlier detection
+
 # These are the data preparation values
 HOLDOUT           <- 70                   # % split to create TRAIN dataset
 
@@ -71,37 +73,66 @@ main<-function(){
   
   # Includes only incidents after 1997, where all incidents represent an act of terrorism 
   filteredDataset <- global_terrorism[global_terrorism$iyear >= 1997 & global_terrorism$doubtterr== 0,]
-  attacks <- data.frame(
+  
+  filteredDataset <- data.frame(
+    "Kill_Count" = filteredDataset$nkill,
+    "Wounded_Count" = filteredDataset$nwound,
+    "Property_Damage_Extent" = filteredDataset$propextent,
     "Country" = filteredDataset$country,
     "Country_Txt" = filteredDataset$country_txt,
     "Region" = filteredDataset$region_txt,
     "Attack_Type" = filteredDataset$attacktype1_txt,
-    "Weapon_Type" = filteredDataset$weaptype1_txt
+    "Weapon_Type" = filteredDataset$weaptype1_txt,
+    "Perpetrators_Number" = filteredDataset$nperps,
+    "Successful" = filteredDataset$success
   )
-  
-  # filter out empty fields before encoding
-  filteredDataset <- filteredDataset[!is.na(filteredDataset$country),]
-  filteredDataset <- filteredDataset[!is.na(filteredDataset$country_txt),]
-  filteredDataset <- filteredDataset[!is.na(filteredDataset$region_txt),]
-  filteredDataset <- filteredDataset[!is.na(filteredDataset$attacktype1_txt),]
-  filteredDataset <- filteredDataset[!is.na(filteredDataset$weaptype1_txt),]
   
   # get 15 countries most often victims of an attack
   top15Countries <- filteredDataset %>% 
-    group_by(country) %>% 
+    group_by(Country) %>% 
     summarise(n = n()) %>% 
     arrange(desc(n)) %>% 
     slice(1:15)
   
-  countryVect <- top15Countries$country
+  countryVect <- top15Countries$Country
   
   # filter out data to have only top 15 countries
-  filteredDataset <- filteredDataset[filteredDataset$country %in% countryVect,]
+  filteredDataset <- filteredDataset[filteredDataset$Country %in% countryVect,]
   
-  readyForNN<-oneHotEncoding(attacks)
-  readyForNN$Successful <- filteredDataset$success
+  killedThresh <- computeRoundedMean(filteredDataset, 'Kill_Count')
+  woundedThresh <- computeRoundedMean(filteredDataset, 'Wounded_Count')
+
+  filteredDataset <- computeImpactfulField(filteredDataset, killedThresh, woundedThresh)
+  
+  perpetrator_mean <- computeRoundedMean(filteredDataset, "Perpetrators_Number")
+  
+  filteredDataset <- filteredDataset %>% 
+    mutate(Perpetrators_Number = case_when(is.na(Perpetrators_Number) 
+                                           | Perpetrators_Number < 0 ~ perpetrator_mean, 
+                                           TRUE ~ as.double(Perpetrators_Number)))
+  
+  
+  filteredDataset <- select(filteredDataset,-c("Property_Damage_Extent", "Country"))
+  
+  transformedNumeric <- transformNumeric(filteredDataset)
+  
+  cr<-cor(select(filteredDataset, c("Kill_Count", "Wounded_Count", "Perpetrators_Number", "Successful", "Impactful")), use="everything")
+  NPLOT_correlagram(cr)
+  
+  attacks_categorical <- data.frame(
+    #"Country" = filteredDataset$Country_Txt,
+    "Region" = filteredDataset$Region,
+    "Attack_Type" = filteredDataset$Attack_Type,
+    "Weapon_Type" = filteredDataset$Weapon_Type
+  )
+
+  transformedCategorical<-oneHotEncoding(attacks_categorical)
+  
+  #readyForNN<-cbind(transformedCategorical, select(transformedNumeric, -c("Kill_Count", "Wounded_Count")))
+  readyForNN<-cbind(transformedCategorical, select(transformedNumeric, -c("Impactful")))
+  
+  
   names(readyForNN)[names(readyForNN) == 'Weapon_Type_Vehiclenottoincludevehicleborneexplosivesiecarortruckbombs'] <- 'Weapon_Type_Vehicle_Not_Bomb'
-  
   
   dataset_split<-NPREPROCESSING_splitdataset(readyForNN)
   measures<- neural_network(train=dataset_split$train, test=dataset_split$test)
@@ -132,7 +163,10 @@ myLibraries<-c(
   "keras",
   "pROC",
   "formattable",
-  "tensorflow")
+  "anchors",
+  "tensorflow",
+  "pgirmess",
+  "corrplot")
 
 library(pacman)
 pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)      
@@ -141,6 +175,7 @@ pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)
 source("scripts/labFunctions.R")
 
 source("scripts/oneHotEncoding.R")
+source("scripts/preprocessingFunctions.R")
 
 set.seed(123)
 
