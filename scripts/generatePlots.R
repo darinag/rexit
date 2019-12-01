@@ -53,21 +53,10 @@ myLibraries<-c("readr",
                "treemap",
                "viridis")
 
-#library(pacman)
-#pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)
+library(pacman)
+pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)
 
 # Load libraries
-library(readr)
-library(ggplot2)
-library(tidyverse)
-library(plotly)
-library(DT)
-library(highcharter)
-library(viridis) # Load the viridis color palettes
-library(treemap)
-install.packages("kableExtra") 
-library(kableExtra)
-
 
 gc() # garbage collection to automatically release memory
 
