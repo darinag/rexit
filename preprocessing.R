@@ -245,9 +245,9 @@ pacman::p_load(char=MYLIBRARIES,install=TRUE,character.only=TRUE)
   plot(filtered_dataset_for_cormat$Perpetrator_Count, filtered_dataset_for_cormat$Wounded_Count, xlab="Perpetrator Count", ylab="Wounded Count", main="Wounded/Kill Count With Outliers")
   abline(lm( Perpetrator_Count ~ Wounded_Count, data=filtered_dataset_for_cormat), col="blue", lwd=3, lty=2)
   
-  x = filtered_dataset_for_cormat$Perpetrator_Count
-  OutVals = boxplot(x)
-  outliers = which( x %in% OutVals)
+  #x = filtered_dataset_for_cormat$Perpetrator_Count
+  #OutVals = boxplot(x)
+  #outliers = which( x %in% OutVals)
   
   perp_count_mean = round(mean(filtered_dataset_for_cormat$Perpetrator_Count))
   
@@ -276,6 +276,9 @@ pacman::p_load(char=MYLIBRARIES,install=TRUE,character.only=TRUE)
   perp_count_field <- no_outliers$Perpetrators_Number
   kill_count_field <- no_outliers$Kill_Count
   wounded_count_field <- no_outliers$Wounded_Count
+  
+  plot(no_outliers$Perpetrators_Number, no_outliers$Kill_Count, xlab="Perpetrator Count", ylab="Victim Count", main="Perpetrator/Kill Count With Outliers")
+  abline(lm( Perpetrator_Count ~ Kill_Count, data=filtered_dataset_for_cormat), col="blue", lwd=3, lty=2)
   
   
   correlation_dataframe <- data.frame("Perpetrators_Count"= perp_count_field,
