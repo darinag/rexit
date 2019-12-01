@@ -27,6 +27,150 @@ NPREPROCESSING_splitdataset<-function(combinedML){
   return(retList)
 }
 
+# To manually set a field type
+# This will store $name=field name, $type=field type
+manualTypes <- data.frame()
+
+# ************************************************
+# NPREPROCESSING_initialFieldType() :
+#
+# Test each field for NUMERIC or SYNBOLIC
+#
+# INPUT: Data Frame - dataset - data
+#
+# OUTPUT : Vector - Vector of types {NUMERIC, SYMBOLIC}
+# ************************************************
+NPREPROCESSING_initialFieldType<-function(dataset){
+  
+  field_types<-vector()
+  for(field in 1:(ncol(dataset))){
+    
+    entry<-which(manualTypes$name==names(dataset)[field])
+    if (length(entry)>0){
+      field_types[field]<-manualTypes$type[entry]
+      next
+    }
+    
+    if (is.numeric(dataset[,field])) {
+      field_types[field]<-TYPE_NUMERIC
+    }
+    else {
+      field_types[field]<-TYPE_SYMBOLIC
+    }
+  }
+  return(field_types)
+}
+
+# ************************************************
+# NPLOT_correlagram() :
+#
+# Plots PLOT_correlagram
+#
+# INPUT: data frame - cr - n x n frame of correlation coefficients
+#
+# OUTPUT : None
+# 221019 - plot absolute values only
+# ************************************************
+NPLOT_correlagram<-function(cr){
+  
+  #Defines the colour range
+  col<-colorRampPalette(c("green", "red"))
+  
+  #To fir on screen, convert field names to a numeric
+  rownames(cr)<-1:length(rownames(cr))
+  colnames(cr)<-rownames(cr)
+  
+  corrplot::corrplot(abs(cr),method="square",
+                     order="FPC",
+                     cl.ratio=0.2,
+                     cl.align="r",
+                     tl.cex = 0.6,cl.cex = 0.6,
+                     cl.lim = c(0, 1),
+                     mar=c(1,1,1,1),bty="n")
+}
+
+# ************************************************
+# NPREPROCESSING_removePunctuation()
+#
+# INPUT: String - fieldName - name of field
+#
+# OUTPUT : String - name of field with punctuation removed
+# ************************************************
+NPREPROCESSING_removePunctuation<-function(fieldName){
+  return(gsub("[[:punct:][:blank:]]+", "", fieldName))
+}
+
+# ************************************************
+# NPREPROCESSING_categorical() :
+#
+# Transform SYMBOLIC or DISCREET fields using 1-hot-encoding
+#
+# INPUT: data frame    - dataset      - symbolic fields
+#        vector string - field_types  - types per field {ORDINAL, SYMBOLIC, DISCREET}
+#
+# OUTPUT : data frame    - transformed dataset
+# ************************************************
+# Small number of literals only otherwise too many dimensions
+# Uses 1-hot-encoding if more than 2 unique literals in the field
+# Otherwise converts the 2 literals into one field of {0,1}
+# ************************************************
+NPREPROCESSING_categorical<-function(dataset,field_types){
+  
+  #This is a dataframe of the transformed categorical fields
+  catagorical<-data.frame(first=rep(NA,nrow(dataset)),stringsAsFactors=FALSE)
+  
+  #For every field in our dataset
+  for(field in 1:(ncol(dataset))){
+    
+    #Only for fields marked SYMBOLIC or DISCREET
+    if ((field_types[field]==TYPE_SYMBOLIC)||(field_types[field]==TYPE_DISCREET)) {
+      
+      #Create a list of unique values in the field (each is a literal)
+      literals<-as.vector(unique(dataset[,field]))
+      numberLiterals<-length(literals)
+      
+      #if there are just two literals in the field we can convert to 0 and 1
+      if (numberLiterals==2){
+        transformed<-ifelse (dataset[,field]==literals[1],0.0,1.0)
+        catagorical<-cbind(catagorical,transformed)
+        colnames(catagorical)[ncol(catagorical)]<-colnames(dataset)[field]
+        
+      } else
+      {
+        #We have now to one-hot encoding FOR SMALL NUMBER of literals
+        if (numberLiterals<=MAX_LITERALS){
+          for(num in 1:numberLiterals){
+            nameOfLiteral<-literals[num]
+            hotEncoding<-ifelse (dataset[,field]==nameOfLiteral,1.0,0.0)
+            
+            # 5/3/2018 - do not convert the field if their are too few literals
+            # Use log of number of recrods as the measure
+            literalsActive<-sum(hotEncoding==1)
+            if (literalsActive>log(length(hotEncoding))) {
+              catagorical<-cbind(catagorical,hotEncoding)
+              #060819 field name has the "_" seperator to make easier to read
+              colnames(catagorical)[ncol(catagorical)]<-paste(colnames(dataset)[field],
+                                                              "_",
+                                                              NPREPROCESSING_removePunctuation(nameOfLiteral),
+                                                              sep="")
+            }
+            else {
+              print(paste("Ignoring in field:",names(dataset)[field],
+                          "Literal:",nameOfLiteral,
+                          "Too few=",literalsActive))
+            }
+          }
+        } else {
+          stop(paste("Error - too many literals in:",names(dataset)[field], numberLiterals))
+        }
+        
+      }
+    }
+  }
+  
+  return(catagorical[,-1]) #Remove that first column that was full of NA due to R
+}
+
 # ************************************************
 # NEvaluateClassifier() :
 #
