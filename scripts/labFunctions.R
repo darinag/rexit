@@ -476,6 +476,7 @@ N_EVALUATE_DeepNeural<-function(test,fieldNameOutput, deep,plot,myTitle){
                                 plot=plot,
                                 title=myTitle)
   
+  
   if (plot==TRUE)
     NprintMeasures(results=measures,title=myTitle)
   
@@ -643,6 +644,7 @@ NdetermineThreshold<-function(test_predicted,
   # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5082211/
   toPlot$youdan<-toPlot$tpr+(1-toPlot$fpr)-1
   indexToBest<-getFirst(which(toPlot$youdan==max(toPlot$youdan)))
+  youdanIdx<-toPlot$youdan[indexToBest]
   maxYoudan<-toPlot$x[indexToBest]
   
   # Euclidean distance sqrt((1 − sensitivity)^2+ (1 − specificity)^2)
@@ -693,7 +695,7 @@ NdetermineThreshold<-function(test_predicted,
     
     text(x=0,y=50, adj = c(-0.2,2),cex=1,
          col="black",
-         paste("THRESHOLDS:\nDistance=",mindist,"\nYoudan=",maxYoudan))
+         paste("THRESHOLDS:\nDistance=",mindist,"\nYouden=",maxYoudan,"\nYouden Idx=",round(youdanIdx, digits=0)))
     
     # ************************************************
     # ROC graph using a library
@@ -729,7 +731,7 @@ NdetermineThreshold<-function(test_predicted,
                     "% FPR: ",fpr,"%",sep="")
     
     text(x=analysis["specificity"],
-         y=analysis["sensitivity"], adj = c(-0.2,-2),cex=1,
+         y=analysis["sensitivity"], adj = c(-0.1,2),cex=1,
          col="red",annotate)
     
   } # endof if plotting

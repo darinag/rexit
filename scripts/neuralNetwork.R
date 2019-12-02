@@ -12,7 +12,7 @@ Sys.setenv(TZ="Europe/London")
 # ************************************************
 #   Global Environment variables
 # ************************************************
-OUTPUT_FIELD      <- "Successful"             # Field name of the output class to predict
+OUTPUT_FIELD      <- "Impactful"             # Field name of the output class to predict
 
 OUTLIER_CONF      <- 0.95                 # Confidence p-value for outlier detection
 
@@ -20,9 +20,9 @@ OUTLIER_CONF      <- 0.95                 # Confidence p-value for outlier detec
 HOLDOUT           <- 70                   # % split to create TRAIN dataset
 
 BASICNN_HIDDEN    <- 10                   # 10 hidden layer neurons
-BASICNN_EPOCHS     <- 100                  # Maximum number of training epocs
-DEEP_HIDDEN       <- c(5,5)               # Number of neurons in each layer
-DEEP_STOPPING     <- 2                    # Number of times no improvement before stop
+BASICNN_EPOCHS    <- 20                   # Maximum number of training epocs
+DEEP_HIDDEN       <- c(19,3)               # Number of neurons in each layer
+DEEP_STOPPING     <- 3                   # Number of times no improvement before stop
 DEEP_TOLERANCE    <- 0.01                 # Error threshold
 DEEP_ACTIVATION   <- "TanhWithDropout"    # Non-linear activation function
 DEEP_REPRODUCABLE <- TRUE 
@@ -55,6 +55,18 @@ neural_network<-function(train,test, plot=TRUE){
                                   deep=mlp_classifier,
                                   plot=plot,
                                   myTitle = myTitle)
+  summary(mlp_classifier)
+  plot(mlp_classifier)
+  
+  importance = as.data.frame(h2o::h2o.varimp(mlp_classifier))
+  
+  row.names(importance)<-importance$variable
+  importanceScaled<-subset(importance, selec=scaled_importance)*100
+  colnames(importanceScaled)<-"Strength"
+  
+  barplot(t(importanceScaled), las=2, border = 0, cex.names=0.7,main=myTitle)
+  
+  print(formattable::formattable(data.frame(importanceScaled)))
   
   return(measures)
 } #endof mlpNeural()
@@ -107,16 +119,16 @@ main<-function(){
   perpetrator_mean <- computeRoundedMean(filteredDataset, "Perpetrators_Number")
   
   filteredDataset <- filteredDataset %>% 
-    mutate(Perpetrators_Number = case_when(is.na(Perpetrators_Number) 
+  mutate(Perpetrators_Number = case_when(is.na(Perpetrators_Number) 
                                            | Perpetrators_Number < 0 ~ perpetrator_mean, 
                                            TRUE ~ as.double(Perpetrators_Number)))
   
   
-  filteredDataset <- select(filteredDataset,-c("Property_Damage_Extent", "Country"))
+  filteredDataset <- dplyr::select(filteredDataset,-c("Property_Damage_Extent", "Country"))
   
   transformedNumeric <- transformNumeric(filteredDataset)
   
-  cr<-cor(select(filteredDataset, c("Kill_Count", "Wounded_Count", "Perpetrators_Number", "Successful", "Impactful")), use="everything")
+  cr<-cor(dplyr::select(filteredDataset, c("Kill_Count", "Wounded_Count", "Perpetrators_Number", "Successful", "Impactful")), use="everything")
   NPLOT_correlagram(cr)
   
   attacks_categorical <- data.frame(
@@ -129,7 +141,7 @@ main<-function(){
   transformedCategorical<-oneHotEncoding(attacks_categorical)
   
   #readyForNN<-cbind(transformedCategorical, select(transformedNumeric, -c("Kill_Count", "Wounded_Count")))
-  readyForNN<-cbind(transformedCategorical, select(transformedNumeric, -c("Impactful")))
+  readyForNN<-cbind(transformedCategorical, dplyr::select(transformedNumeric, -c("Successful", "Perpetrators_Number")))
   
   
   names(readyForNN)[names(readyForNN) == 'Weapon_Type_Vehiclenottoincludevehicleborneexplosivesiecarortruckbombs'] <- 'Weapon_Type_Vehicle_Not_Bomb'
