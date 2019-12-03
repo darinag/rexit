@@ -81,12 +81,12 @@ main<-function(){
   install.packages("dplyr")
   library(dplyr)
   
-  # Filter data for moments calculations
+  # Filter data for calculations
   filtered_killed <- post_feature_selection %>% filter(!is.na(Kill_Count) & Kill_Count>=0 ) 
   filtered_wounded_no_na_no_zero <- post_feature_selection %>% filter(!is.na(Wounded_Count) & Wounded_Count>0)
   
   
-  # Thresholds
+  # Calculate thresholds
   killed_threshold <- round(mean(filtered_killed$Kill_Count)) 
   wounded_threshold <- round(mean(filtered_wounded_no_na_no_zero$Wounded_Count))
   perpetrator_mean <- computeRoundedMean(post_feature_selection, "Perpetrators_Number")
@@ -96,14 +96,7 @@ main<-function(){
   df <- replace.value(df, c("Wounded_Count"), from=NA, to=as.double(wounded_threshold))
   df <- subset(df, !is.na(Region))
   df <- subset(df, (Attack_Type != 9))
-  
   df <- df %>% mutate(Perpetrators_Number = case_when(is.na(Perpetrators_Number) | Perpetrators_Number < 0 ~ perpetrator_mean, TRUE ~ as.double(Perpetrators_Number)))
-  
-  
-  #countries<- loans %>% group_by(Country) %>% summarize(count=n())
-  # regions<- df %>% group_by(Region) %>% summarize(count=n())
-  # attack_type <- df %>% group_by(Attack_Type) %>% summarize(count=n())
-  # weapon_type <- df %>% group_by(Weapon_Type) %>% summarize(count=n())
   
   north_america <- subset(df, (Region==1))
   central_america <- subset(df, (Region==2))
@@ -119,29 +112,25 @@ main<-function(){
   australia_oceania <- subset(df, (Region==12))
   
   
-  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  # # # # # # # # # # # # # # # # # # # # #
-  
-  
   som_df <- south_asia[ , -which(colnames(middle_east)=="Region")]
   som_df_name <- "south_asia"
   
+  # Transform all numeric fields 
   som_df <- transformNumeric(som_df)
   
+  # Scale the dataframe before feeding it into the SOM model
   data_train_matrix <- as.matrix(scale(som_df))
   
-  dev.off()
-  
-  #Creates the SOM neuron map  dist.fcts="euclidean"
+  # Creates the SOM neuron
   som_grid = kohonen::somgrid(SOM_GRIDSIZE, SOM_GRIDSIZE, SOM_TYPE)
   
+  # Build SOM model
   som_model <- kohonen::som(data_train_matrix,
                             grid=som_grid,
                             rlen=SOM_EPOCHS,
                             alpha=SOM_LEARN_RATE,
                             keep.data = TRUE)
 
-  
-  
   # Progression of the learning process
   plot(som_model, type="changes")
   
@@ -154,35 +143,44 @@ main<-function(){
   # Codebook vectors. This chart represents the vector of weights in a pie chart for each cell of the map.
   plot(som_model, type="codes") 
   
+  # Mapping plot
   plot(som_model, type="mapping")
-  plot(som_model, type="quality") 
-  
 
-  
+  # Pallete function used for plots
   coolBlueHotRed <- function(n, alpha = 1) {
     rainbow(n, end=4/6, alpha=alpha)[n:1]
   }
   
-
-  
-
-  while (!is.null(dev.list()))  dev.off();
-  
-  som_codes<-data.frame(som_model$codes)
+ # Store SOM model codes in a variable  
+ som_codes<-data.frame(som_model$codes)
+ 
+ # Iterate over all features and generate heatmaps for each of them. 
+ # Store them in the current folder
  for (i in 1:ncol(som_df)){
+   
+  # Restart plots
   while (!is.null(dev.list()))  dev.off()
+   
+  # Create plot variable name based on the feature number and region name 
   jpeg_name = paste("rplot_", som_df_name, "_", i, ".jpg", sep="")
+  
+  # Create a jpg file
   jpeg(jpeg_name)
+  
+  # Get the unscaled value of the feature to print it as a scale on the heatmap
+  var_unscaled <- aggregate(as.numeric(som_df[,i]), by=list(som_model$unit.classif), FUN=mean, simplify=TRUE)[,2] 
+  
+  # PLot the heatmap for the current feraure index i
   plot(som_model, 
        type = "property",
-       property = som_codes[,i], 
+       property = var_unscaled, 
        main=names(data.frame(som_model$data))[i],
        palette.name=coolBlueHotRed
   )
+
+  
   dev.off()
  }
-  
- 
   
 } 
 
