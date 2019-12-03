@@ -110,77 +110,85 @@ main<-function(){
   sub_saharan_africa <- subset(df, (Region==11))
   australia_oceania <- subset(df, (Region==12))
   
-  
-  som_df <- south_asia[ , -which(colnames(middle_east)=="Region")]
-  som_df_name <- "south_asia"
-  
-  library(outliers)
-  # Transform all numeric fields 
-  som_df <- transformNumeric(som_df)
-  
-  # Scale the dataframe before feeding it into the SOM model
-  data_train_matrix <- as.matrix(scale(som_df))
-  
-  # Creates the SOM neuron
-  som_grid = kohonen::somgrid(SOM_GRIDSIZE, SOM_GRIDSIZE, SOM_TYPE)
-  
-  # Build SOM model
-  som_model <- kohonen::som(data_train_matrix,
-                            grid=som_grid,
-                            rlen=SOM_EPOCHS,
-                            alpha=SOM_LEARN_RATE,
-                            keep.data = TRUE)
-
-  # Progression of the learning process
-  plot(som_model, type="changes")
-  
-  # The number of instances into the cells are used to identify high-density areas
-  plot(som_model, type="count")
-  
-  # Neighbour distance plot. Called “U-Matrix” (unified distance matrix)
-  plot(som_model, type="dist.neighbours", main = "SOM neighbour distances")
-  
-  # Codebook vectors. This chart represents the vector of weights in a pie chart for each cell of the map.
-  plot(som_model, type="codes") 
-  
-  # Mapping plot
-  plot(som_model, type="mapping")
-
-  # Pallete function used for plots
-  coolBlueHotRed <- function(n, alpha = 1) {
-    rainbow(n, end=4/6, alpha=alpha)[n:1]
+  # Function to prepare the dataframe and build a SOM model.
+  # Parameters: the desired region df and the region name
+  SOM <- function(region_df, region_df_name){
+    som_df <- region_df[ , -which(colnames(middle_east)=="Region")]
+    som_df_name <- region_df_name
+    unscaled_som_df <- region_df[ , -which(colnames(middle_east)=="Region")]
+    
+    library(outliers)
+    # Transform all numeric fields 
+    som_df <- transformNumeric(som_df)
+    
+    # Scale the dataframe before feeding it into the SOM model
+    data_train_matrix <- as.matrix(scale(som_df))
+    
+    # Creates the SOM neuron
+    som_grid = kohonen::somgrid(SOM_GRIDSIZE, SOM_GRIDSIZE, SOM_TYPE)
+    
+    # Build SOM model
+    som_model <- kohonen::som(data_train_matrix,
+                              grid=som_grid,
+                              rlen=SOM_EPOCHS,
+                              alpha=SOM_LEARN_RATE,
+                              keep.data = TRUE)
+    
+    # Progression of the learning process
+    plot(som_model, type="changes")
+    
+    # The number of instances into the cells are used to identify high-density areas
+    plot(som_model, type="count")
+    
+    # Neighbour distance plot. Called “U-Matrix” (unified distance matrix)
+    plot(som_model, type="dist.neighbours", main = "SOM neighbour distances")
+    
+    # Codebook vectors. This chart represents the vector of weights in a pie chart for each cell of the map.
+    plot(som_model, type="codes") 
+    
+    # Mapping plot
+    plot(som_model, type="mapping")
+    
+    # Pallete function used for plots
+    coolBlueHotRed <- function(n, alpha = 1) {
+      rainbow(n, end=4/6, alpha=alpha)[n:1]
+    }
+    
+    # Store SOM model codes in a variable  
+    som_codes<-data.frame(som_model$codes)
+    
+    # Iterate over all features and generate heatmaps for each of them. 
+    # Store them in the current folder
+    for (i in 1:ncol(som_df)){
+      
+      # Restart plots
+      while (!is.null(dev.list()))  dev.off()
+      
+      # Create plot variable name based on the feature number and region name 
+      jpeg_name = paste("rplot_", som_df_name, "_", i, ".jpg", sep="")
+      
+      # Create a jpg file
+      jpeg(jpeg_name)
+      
+      # Get the unscaled value of the feature to print it as a scale on the heatmap
+      var_unscaled <- aggregate(as.numeric(unscaled_som_df[,i]), by=list(som_model$unit.classif), FUN=mean, simplify=TRUE)[,2] 
+      
+      # PLot the heatmap for the current feraure index i
+      plot(som_model, 
+           type = "property",
+           property = var_unscaled, 
+           main=names(som_df)[i],
+           palette.name=coolBlueHotRed
+      )
+      dev.off()
+    }
+    
+    # Build SOM model for e.g. south asia
+    # Feel free to experiment with different regions
+    SOM(south_asia, "south_asia")
+    
+    dev.off()
   }
-  
- # Store SOM model codes in a variable  
- som_codes<-data.frame(som_model$codes)
- 
- # Iterate over all features and generate heatmaps for each of them. 
- # Store them in the current folder
- for (i in 1:ncol(som_df)){
-   
-  # Restart plots
-  while (!is.null(dev.list()))  dev.off()
-   
-  # Create plot variable name based on the feature number and region name 
-  jpeg_name = paste("rplot_", som_df_name, "_", i, ".jpg", sep="")
-  
-  # Create a jpg file
-  jpeg(jpeg_name)
-  
-  # Get the unscaled value of the feature to print it as a scale on the heatmap
-  var_unscaled <- aggregate(as.numeric(som_df[,i]), by=list(som_model$unit.classif), FUN=mean, simplify=TRUE)[,2] 
-  
-  # PLot the heatmap for the current feraure index i
-  plot(som_model, 
-       type = "property",
-       property = var_unscaled, 
-       main=names(som_df)[i],
-       palette.name=coolBlueHotRed
-  )
-
-  
-  dev.off()
- }
   
 } 
 
@@ -197,11 +205,7 @@ source("preprocessingFunctions.R")
 
 
 set.seed(123)
-
-
 main()
-
-print("end")
 
 gc() # garbage collection to automatically release memory
 # clear plots and other graphics
@@ -210,30 +214,3 @@ graphics.off()
 
 # clears the console area
 cat("\014")
-
-print("START Self Organising Maps")
-
-# specify libraries to be loaded by pacman
-myLibraries<-c(
-  "readr",
-  "ggplot2",
-  "dplyr",
-  "tidyverse",
-  "DT",
-  "plotly",
-  "highcharter",
-  "viridis",
-  "som",
-  "kohonen"
-)
-
-
-#library(pacman)
-#pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)      
-
-set.seed(123)
-
-main()
-
-print("end of script")
-
