@@ -35,8 +35,10 @@ THRESHOLD_MISSING_VALUES = 0.25
 # ************************************************
 main<-function(){
   
+  print("Loading dataset...")
   # Load the dataset
   global_terrorism <- read.csv(DATASET_FILENAME)
+  print("Dataset loaded.")
   
   # Includes only incidents after 1997, where all incidents represent an act of terrorism 
   filteredDataset <- global_terrorism[global_terrorism$iyear >= 1997 & global_terrorism$doubtterr== 0,]

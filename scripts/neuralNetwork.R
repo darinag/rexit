@@ -97,11 +97,16 @@ neural_network<-function(train,test, plot=TRUE){
 # OUTPUT: None
 # ************************************************
 main<-function(){
+  
+  print("Loading dataset...")
   # Load the dataset
   global_terrorism <- read.csv(DATASET_FILENAME)
+  print("Dataset loaded.")
   
   # Includes only incidents after 1997, where all incidents represent an act of terrorism 
   filteredDataset <- global_terrorism[global_terrorism$iyear >= 1997 & global_terrorism$doubtterr== 0,]
+  
+  print("Starting preparation of the data")
   
   filteredDataset <- data.frame(
     "Kill_Count" = filteredDataset$nkill,
@@ -136,6 +141,9 @@ main<-function(){
   # generate the "Impactful" field
   filteredDataset <- computeImpactfulField(filteredDataset, killedThresh, woundedThresh)
   
+  
+  print("Impactful field added")
+  
   # replace empty values of Perpetrators_Number with the mean
   filteredDataset <- filteredDataset %>% mutate(Perpetrators_Number = case_when(is.na(Perpetrators_Number) 
                                            | Perpetrators_Number < 0 ~ perpetrator_mean, 
@@ -145,6 +153,8 @@ main<-function(){
   filteredDataset <- dplyr::select(filteredDataset,-c("Property_Damage_Extent", "Country"))
   
   transformedNumeric <- transformNumeric(filteredDataset)
+  
+  print("Numerics scaled")
   
   # This code was used to generate the correlation matrix between the 5 fields
   #cr<-cor(dplyr::select(filteredDataset, c("Kill_Count",
@@ -163,12 +173,18 @@ main<-function(){
   # perform 1-hot-encoding on Region, Attack_Type and Weapon_Type
   transformedCategorical<-oneHotEncoding(attacks_categorical)
   
+  print("One-hot-encoding applied to categorical fields")
+  
   # combine the preprocessed data to be fed into the neural network, remove fields that are not of interest, adjust as needed
   # in this case - "Impactful" since we're predicting "Successful" and "Perpetrators_Number" after analysing the correlatio nmatrix
   readyForNN<-cbind(transformedCategorical, dplyr::select(transformedNumeric, -c("Impactful", "Perpetrators_Number")))
   
   dataset_split<-NPREPROCESSING_splitdataset(readyForNN)
+  
+  print("Start training and evaluation")
   measures<- neural_network(train=dataset_split$train, test=dataset_split$test)
+  
+  print("Neural network finished")
 }
 
 gc() # garbage collection to automatically release memory
