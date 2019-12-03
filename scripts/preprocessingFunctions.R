@@ -1,5 +1,15 @@
-
-
+# ************************************************
+# computeImpactfulField() :
+#
+# Compute and add Impactful field to the dataframe and transform Kill Count
+#
+# INPUT: data Frame - refined dataset
+#        threshold for Kill Count - Generated with computeRoundedMean
+#        threshold for Wounded Count - Generated with computeRoundedMean
+#
+# OUTPUT : data Frame - transformed dataset
+# 
+# ************************************************
 computeImpactfulField <- function(dataset, killed_threshold, wounded_threshold) {
   
   dataset <- replace.value(dataset, c("Kill_Count"), from=NA, to=as.double(killed_threshold))
@@ -16,7 +26,18 @@ computeImpactfulField <- function(dataset, killed_threshold, wounded_threshold) 
 }
 
 
-
+# ************************************************
+# computeRoundedMean() :
+#
+# Compute rounded means for fields that cannot contain continuous values
+# To be used as a thresholds or mean
+#
+# INPUT: data Frame - refined dataset with no missing values
+#        column name of the field containing the values to be thransformed
+#
+# OUTPUT : threshold - the computed mean
+# 
+# ************************************************
 computeRoundedMean <- function(dataset, colname) {
   #filtered_dataset <- dataset %>% filter(!is.na(filtered_dataset[colname, ]) & colname>=0 ) 
   columnIndex <- which(colnames(dataset) == colname)
@@ -28,7 +49,18 @@ computeRoundedMean <- function(dataset, colname) {
 
 }
 
-
+# ************************************************
+# correlationAndCovarianceMatrix() :
+#
+# Correlation and Covariance matrices for numeric fields
+# 
+#
+# INPUT: data Frame - refined dataset with no missing values
+#
+#
+# OUTPUT: Correlation and Covariance matrices displayed in the console
+# 
+# ************************************************
 correlationAndCovarianceMatrix <- function(dataset) {
   
   # Dataset for Correlation Matrix
@@ -49,7 +81,16 @@ correlationAndCovarianceMatrix <- function(dataset) {
   
 }
 
-#Input dataset must only contain fields of numeric type with removed NA values
+# ************************************************
+# transformNumeric() :
+#
+# Check data types, remove outliers from numeric data and transform them with feature scaling
+#
+# INPUT: data Frame - refined dataset that must only contain fields of numeric type with removed missing values
+#
+# OUTPUT : transformed data Frame, ready for modelling and further transformation
+# 
+# ************************************************
 transformNumeric <- function(dataset) {
   
   field_types<-NPREPROCESSING_initialFieldType(dataset)
