@@ -22,37 +22,14 @@ rm(list=ls())
 # ************************************************
 # Global Environment variables
 
-DATASET_FILENAME = "globalterrorismdb_0718dist.csv"          # Name of input dataset file
+DATASET_FILENAME = "data/globalterrorismdb_0718dist.csv"          # Name of input dataset file
 
 SCALE_DATASET     <- TRUE                 # Set to true to scale dataset before ML stage
-OUTLIER_CONF      <- 0.95                 # Confidence p-value for outlier detection
-
-TYPE_DISCREET     <- "DISCREET"           # field is discreet (numeric)
-TYPE_ORDINAL      <- "ORDINAL"            # field is continuous numeric
-TYPE_SYMBOLIC     <- "SYMBOLIC"           # field is a string
-TYPE_NUMERIC      <- "NUMERIC"            # field is initially a numeric
-
-DISCREET_BINS     <- 5                    # Number of empty bins to determine discreet
 
 SOM_EPOCHS        <- 2000                 # SOM training training epochs
 SOM_LEARN_RATE    <- c(0.05,0.01)         # SOM learning rate - see documentation
 SOM_GRIDSIZE      <- 10                   # SOM a 20x20 grid of neurons
 SOM_TYPE          <- "hexagonal"          # SOM neuron grid shape (also "rectangular")
-
-
-MYLIBRARIES<-c("outliers",
-               "corrplot",
-               "MASS",
-               "pROC",
-               "formattable",
-               "stats",
-               "caret",
-               "PerformanceAnalytics",
-               "dplyr",
-               "stats",
-               "anchors",
-               "kohonen")
-
 
 
 # ************************************************
@@ -190,6 +167,7 @@ main<-function(){
     dev.off()
   }
   
+<<<<<<< HEAD
 } 
 
 
@@ -206,6 +184,40 @@ source("preprocessingFunctions.R")
 
 set.seed(123)
 main()
+=======
+ # Store SOM model codes in a variable  
+ som_codes<-data.frame(som_model$codes)
+ 
+ # Iterate over all features and generate heatmaps for each of them. 
+ # Store them in the current folder
+ for (i in 1:ncol(som_df)){
+   
+  # Restart plots
+  while (!is.null(dev.list()))  dev.off()
+   
+  # Create plot variable name based on the feature number and region name 
+  jpeg_name = paste("rplot_", som_df_name, "_", i, ".jpg", sep="")
+  
+  # Create a jpg file
+  jpeg(jpeg_name)
+  
+  # Get the unscaled value of the feature to print it as a scale on the heatmap
+  var_unscaled <- aggregate(as.numeric(som_df[,i]), by=list(som_model$unit.classif), FUN=mean, simplify=TRUE)[,2] 
+  
+  # PLot the heatmap for the current feraure index i
+  plot(som_model, 
+       type = "property",
+       property = var_unscaled, 
+       main=names(som_df)[i],
+       palette.name=coolBlueHotRed
+  )
+
+  
+  dev.off()
+ }
+  
+}
+>>>>>>> 2e3f9a19d8472b68b90e195a3c3c5fd927fe86e3
 
 gc() # garbage collection to automatically release memory
 # clear plots and other graphics
@@ -214,3 +226,37 @@ graphics.off()
 
 # clears the console area
 cat("\014")
+<<<<<<< HEAD
+=======
+
+# load functions from the labs, all code written by Prof. Nick Ryman-Tubb
+source("scripts/labFunctions.R")
+source("scripts/preprocessingFunctions.R")
+
+print("START Self Organising Maps")
+
+# specify libraries to be loaded by pacman
+MYLIBRARIES<-c("outliers",
+               "corrplot",
+               "MASS",
+               "pROC",
+               "formattable",
+               "stats",
+               "caret",
+               "PerformanceAnalytics",
+               "dplyr",
+               "stats",
+               "anchors",
+               "kohonen")
+
+
+library(pacman)
+pacman::p_load(char=MYLIBRARIES,install=TRUE,character.only=TRUE)      
+
+set.seed(123)
+
+main()
+
+print("end of SOM")
+
+>>>>>>> 2e3f9a19d8472b68b90e195a3c3c5fd927fe86e3
