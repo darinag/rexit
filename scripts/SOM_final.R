@@ -22,37 +22,14 @@ rm(list=ls())
 # ************************************************
 # Global Environment variables
 
-DATASET_FILENAME = "globalterrorismdb_0718dist.csv"          # Name of input dataset file
+DATASET_FILENAME = "data/globalterrorismdb_0718dist.csv"          # Name of input dataset file
 
 SCALE_DATASET     <- TRUE                 # Set to true to scale dataset before ML stage
-OUTLIER_CONF      <- 0.95                 # Confidence p-value for outlier detection
-
-TYPE_DISCREET     <- "DISCREET"           # field is discreet (numeric)
-TYPE_ORDINAL      <- "ORDINAL"            # field is continuous numeric
-TYPE_SYMBOLIC     <- "SYMBOLIC"           # field is a string
-TYPE_NUMERIC      <- "NUMERIC"            # field is initially a numeric
-
-DISCREET_BINS     <- 5                    # Number of empty bins to determine discreet
 
 SOM_EPOCHS        <- 2000                 # SOM training training epochs
 SOM_LEARN_RATE    <- c(0.05,0.01)         # SOM learning rate - see documentation
 SOM_GRIDSIZE      <- 10                   # SOM a 20x20 grid of neurons
 SOM_TYPE          <- "hexagonal"          # SOM neuron grid shape (also "rectangular")
-
-
-MYLIBRARIES<-c("outliers",
-               "corrplot",
-               "MASS",
-               "pROC",
-               "formattable",
-               "stats",
-               "caret",
-               "PerformanceAnalytics",
-               "dplyr",
-               "stats",
-               "anchors",
-               "kohonen")
-
 
 
 # ************************************************
@@ -182,26 +159,7 @@ main<-function(){
   dev.off()
  }
   
-} 
-
-
-# clears the console area
-cat("\014")
-
-#library(pacman)
-#pacman::p_load(char=MYLIBRARIES,install=TRUE,character.only=TRUE)
-
-# load functions 
-source("labFunctions.R")
-source("preprocessingFunctions.R")
-
-
-set.seed(123)
-
-
-main()
-
-print("end")
+}
 
 gc() # garbage collection to automatically release memory
 # clear plots and other graphics
@@ -211,29 +169,33 @@ graphics.off()
 # clears the console area
 cat("\014")
 
+# load functions 
+source("scripts/labFunctions.R")
+source("scripts/preprocessingFunctions.R")
+
 print("START Self Organising Maps")
 
 # specify libraries to be loaded by pacman
-myLibraries<-c(
-  "readr",
-  "ggplot2",
-  "dplyr",
-  "tidyverse",
-  "DT",
-  "plotly",
-  "highcharter",
-  "viridis",
-  "som",
-  "kohonen"
-)
+MYLIBRARIES<-c("outliers",
+               "corrplot",
+               "MASS",
+               "pROC",
+               "formattable",
+               "stats",
+               "caret",
+               "PerformanceAnalytics",
+               "dplyr",
+               "stats",
+               "anchors",
+               "kohonen")
 
 
-#library(pacman)
-#pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)      
+library(pacman)
+pacman::p_load(char=MYLIBRARIES,install=TRUE,character.only=TRUE)      
 
 set.seed(123)
 
 main()
 
-print("end of script")
+print("end of SOM")
 
