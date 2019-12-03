@@ -169,7 +169,7 @@ graphics.off()
 # clears the console area
 cat("\014")
 
-# load functions 
+# load functions from the labs, all code written by Prof. Nick Ryman-Tubb
 source("scripts/labFunctions.R")
 source("scripts/preprocessingFunctions.R")
 
