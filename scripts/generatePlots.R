@@ -1,3 +1,21 @@
+# ************************************************
+# This work is licensed under a Creative Commons
+# Attribution-NonCommercial 4.0 International License.
+# ************************************************
+#  PRATICAL BUSINESS ANALYTICS 2019
+#  COM3018 
+#
+# Group: REXIT
+# The Surrey Business School
+# University of Surrey
+# GUILDFORD
+# Surrey GU2 7XH
+#
+# 03 DECEMBER 2019
+#
+# ************************************************
+# R Script For Coursework Assignment
+
 # Clear all objects in "global environment"
 rm(list=ls())
 
