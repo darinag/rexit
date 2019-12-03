@@ -39,6 +39,7 @@ SOM_TYPE          <- "hexagonal"          # SOM neuron grid shape (also "rectang
 # ************************************************
 main<-function(){
   
+  print("Load dataset...")
   # Read dataset
   global_terrorism <- read.csv(DATASET_FILENAME)
   
@@ -54,6 +55,7 @@ main<-function(){
     "Wounded_Count" = after_1997$nwound
   )
   
+  print("Preprocess data...")
   # Filter data for calculations
   filtered_killed <- post_feature_selection %>% filter(!is.na(Kill_Count) & Kill_Count>=0 ) 
   filtered_wounded_no_na_no_zero <- post_feature_selection %>% filter(!is.na(Wounded_Count) & Wounded_Count>0)
@@ -87,26 +89,33 @@ main<-function(){
   # Function to prepare the dataframe and build a SOM model.
   # Parameters: the desired region df and the region name
   SOM <- function(region_df, region_df_name){
+
     som_df <- region_df[ , -which(colnames(region_df)=="Region")]
     som_df_name <- region_df_name
     unscaled_som_df <- region_df[ , -which(colnames(region_df)=="Region")]
     
+    
+    print("Transform data prior feeding it into the model...")
     # Transform all numeric fields 
     som_df <- transformNumeric(som_df)
     
+    print("Scale dataframe...")
     # Scale the dataframe before feeding it into the SOM model
     data_train_matrix <- as.matrix(scale(som_df))
     
+    print("Load SOM parameters...")
     # Creates the SOM neuron
     som_grid = kohonen::somgrid(SOM_GRIDSIZE, SOM_GRIDSIZE, SOM_TYPE)
     
     # Build SOM model
+    print("Building SOM model...")
     som_model <- kohonen::som(data_train_matrix,
                               grid=som_grid,
                               rlen=SOM_EPOCHS,
                               alpha=SOM_LEARN_RATE,
                               keep.data = TRUE)
     
+    print("Cretes differnt plots...")
     # Progression of the learning process
     plot(som_model, type="changes")
     
@@ -158,6 +167,9 @@ main<-function(){
       )
       dev.off()
     }
+    
+    print("All heatmaps saved succeffuly in the current folder.")
+    print("End of SOM")
     
   }
   
