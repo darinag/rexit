@@ -1,4 +1,34 @@
+# This work is licensed under a Creative Commons
+# Attribution-NonCommercial 4.0 International License.
 # ************************************************
+#  PRATICAL BUSINESS ANALYTICS 2019
+#  COM3018 
+#
+# Group: REXIT
+# The Surrey Business School
+# University of Surrey
+# GUILDFORD
+# Surrey GU2 7XH
+#
+# 03 DECEMBER 2019
+#
+# ************************************************
+# R Script For Coursework Assignment
+
+# ************************************************
+#   Global Environment variables
+# ************************************************
+OUTLIER_CONF      <- 0.95                 # Confidence p-value for outlier detection
+
+TYPE_DISCREET     <- "DISCREET"           # field is discreet (numeric)
+TYPE_ORDINAL      <- "ORDINAL"            # field is continuous numeric
+TYPE_SYMBOLIC     <- "SYMBOLIC"           # field is a string
+TYPE_NUMERIC      <- "NUMERIC"            # field is initially a numeric
+TYPE_IGNORE       <- "IGNORE"             # field is not encoded
+
+DISCREET_BINS     <- 0                     # Number of empty bins to determine discreet
+MAX_LITERALS      <- 55                    # Maximum numner of hotcoding new fields
+
 # computeImpactfulField() :
 #
 # Compute and add Impactful field to the dataframe and transform Kill Count
@@ -25,9 +55,8 @@ computeImpactfulField <- function(dataset, killed_threshold, wounded_threshold) 
   dataset_refined;
 }
 
-
 # ************************************************
-# computeRoundedMean() :
+# computeRoundedMean(dataset, colname) :
 #
 # Compute rounded means for fields that cannot contain continuous values
 # To be used as a thresholds or mean
@@ -39,18 +68,16 @@ computeImpactfulField <- function(dataset, killed_threshold, wounded_threshold) 
 # 
 # ************************************************
 computeRoundedMean <- function(dataset, colname) {
-  #filtered_dataset <- dataset %>% filter(!is.na(filtered_dataset[colname, ]) & colname>=0 ) 
   columnIndex <- which(colnames(dataset) == colname)
   filtered_dataset <- dataset[!is.na(dataset[,columnIndex]), ]
   filtered_dataset <- filtered_dataset[filtered_dataset[,columnIndex]>=0, ]
   threshold <- round(mean(filtered_dataset[,columnIndex]))
   
   threshold;
-
 }
 
 # ************************************************
-# correlationAndCovarianceMatrix() :
+# correlationAndCovarianceMatrix(dataset) :
 #
 # Correlation and Covariance matrices for numeric fields
 # 
@@ -82,7 +109,7 @@ correlationAndCovarianceMatrix <- function(dataset) {
 }
 
 # ************************************************
-# transformNumeric() :
+# transformNumeric(dataset) :
 #
 # Check data types, remove outliers from numeric data and transform them with feature scaling
 #
@@ -95,9 +122,7 @@ transformNumeric <- function(dataset) {
   
   field_types<-NPREPROCESSING_initialFieldType(dataset)
   
-  # ************************************************
   # View the field types on the console
-  
   numeric_fields<-names(dataset)[field_types=="NUMERIC"]
   print(paste("NUMERIC FIELDS=",length(numeric_fields)))
   print(numeric_fields)
@@ -106,9 +131,7 @@ transformNumeric <- function(dataset) {
   print(paste("SYMBOLIC FIELDS=",length(symbolic_fields)))
   print(symbolic_fields)
   
-  # ************************************************
   # Determine if the numeric fields might be discreet numeric
-  
   field_types1<-NPREPROCESSING_discreetNumeric(dataset=dataset,
                                                field_types=field_types,
                                                cutoff=DISCREET_BINS)
@@ -120,20 +143,53 @@ transformNumeric <- function(dataset) {
   numerics<-data.frame(dataset[,which(field_types==TYPE_NUMERIC)])
   
   # Test if any values are outliers and replace with mean values
-  # Null hyposis is there are no outliers
-  # We reject this if the p-value<significance (i.e. 0.05), confidence=95%
   numerics<-NPREPROCESSING_outlier(ordinals=numerics,confidence=OUTLIER_CONF)
  
   colnames <- c(colnames(numerics))
-
   
-  # ************************************************
   # z-scale
-  #zscaled<-as.data.frame(scale(perps_preprocessed,center=TRUE, scale=TRUE))
   scaled <- as.data.frame(scale(numerics,center=TRUE, scale=TRUE))
   ReadyforML<-Nrescaleentireframe(scaled)
   as.data.frame(ReadyforML)
 
 }
 
-
+# ************************************************
+# oneHotEncoding(attacks) :
+#
+# Correlation and Covariance matrices for numeric fields
+# 
+#
+# INPUT: data Frame - refined dataset with no missing values
+#
+#
+# OUTPUT: one-hot-encoded categorical fields
+# 
+# ************************************************
+oneHotEncoding <- function (attacks) {
+  
+  field_types<-NPREPROCESSING_initialFieldType(attacks)
+  
+  results<-data.frame(field=names(attacks),initial=field_types,types1=field_types)
+  print(formattable::formattable(results))
+  
+  # perform 1 hot encoding on symbolic fields
+  catagoricalReadyforML<-NPREPROCESSING_categorical(dataset=attacks,field_types=field_types)
+  
+  print(formattable::formattable(data.frame(fields=names(catagoricalReadyforML))))
+  
+  # number of symbolic fields before transformation
+  nonNumericbefore<-length(which(field_types==TYPE_SYMBOLIC))
+  
+  # number of fields generated by 1-hot-encoding
+  nonNumerictranformed<-ncol(catagoricalReadyforML)
+  print(paste("Before encoding=",nonNumericbefore,"After",nonNumerictranformed))
+  
+  # Output the names of the encoded fields (literals)
+  print(formattable::formattable(data.frame(field=1:nonNumerictranformed,encoded=names(catagoricalReadyforML))))
+  
+  # The dataset for ML information
+  print(paste("Fields=",ncol(catagoricalReadyforML)))
+  
+  catagoricalReadyforML
+}
