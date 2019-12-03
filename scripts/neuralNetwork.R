@@ -31,8 +31,8 @@ OUTPUT_FIELD      <- "Successful"         # Field name of the output class to pr
 HOLDOUT           <- 70                   # % split to create TRAIN dataset
 
 BASICNN_HIDDEN    <- 10                   # 10 hidden layer neurons
-BASICNN_EPOCHS    <- 100                  # Maximum number of training epocs
-DEEP_HIDDEN       <- c(5,5)               # Number of neurons in each layer
+BASICNN_EPOCHS    <- 20                   # Maximum number of training epocs
+DEEP_HIDDEN       <- c(19,3)              # Number of neurons in each layer
 DEEP_STOPPING     <- 2                    # Number of times no improvement before stop
 DEEP_TOLERANCE    <- 0.01                 # Error threshold
 DEEP_ACTIVATION   <- "TanhWithDropout"    # Non-linear activation function
@@ -125,7 +125,7 @@ main<-function(){
   
   countryVect <- top15Countries$Country
   
-  # filter out data to have only top 15 countries
+  # filter out data to have only top 15 countries to reduce dimensionality
   filteredDataset <- filteredDataset[filteredDataset$Country %in% countryVect,]
   
   # get the mean of the fields to impute missing data
@@ -192,7 +192,8 @@ myLibraries<-c(
   "formattable",
   "anchors",
   "pgirmess",
-  "corrplot")
+  "corrplot",
+  "outliers")
 
 library(pacman)
 pacman::p_load(char=myLibraries,install=TRUE,character.only=TRUE)      

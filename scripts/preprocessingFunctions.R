@@ -29,7 +29,7 @@ TYPE_IGNORE       <- "IGNORE"             # field is not encoded
 DISCREET_BINS     <- 0                     # Number of empty bins to determine discreet
 MAX_LITERALS      <- 55                    # Maximum numner of hotcoding new fields
 
-# computeImpactfulField() :
+# computeImpactfulField(dataset, killed_threshold, wounded_threshold) :
 #
 # Compute and add Impactful field to the dataframe and transform Kill Count
 #
@@ -157,7 +157,7 @@ transformNumeric <- function(dataset) {
 # ************************************************
 # oneHotEncoding(attacks) :
 #
-# Correlation and Covariance matrices for numeric fields
+# Perform one-hot-encoding on categorical fields
 # 
 #
 # INPUT: data Frame - refined dataset with no missing values
