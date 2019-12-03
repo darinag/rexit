@@ -1,4 +1,3 @@
-# ************************************************
 # This work is licensed under a Creative Commons
 # Attribution-NonCommercial 4.0 International License.
 # ************************************************
@@ -30,6 +29,17 @@ TYPE_IGNORE       <- "IGNORE"             # field is not encoded
 DISCREET_BINS     <- 0                     # Number of empty bins to determine discreet
 MAX_LITERALS      <- 55                    # Maximum numner of hotcoding new fields
 
+# computeImpactfulField() :
+#
+# Compute and add Impactful field to the dataframe and transform Kill Count
+#
+# INPUT: data Frame - refined dataset
+#        threshold for Kill Count - Generated with computeRoundedMean
+#        threshold for Wounded Count - Generated with computeRoundedMean
+#
+# OUTPUT : data Frame - transformed dataset
+# 
+# ************************************************
 computeImpactfulField <- function(dataset, killed_threshold, wounded_threshold) {
   
   dataset <- replace.value(dataset, c("Kill_Count"), from=NA, to=as.double(killed_threshold))
@@ -45,18 +55,39 @@ computeImpactfulField <- function(dataset, killed_threshold, wounded_threshold) 
   dataset_refined;
 }
 
+# ************************************************
+# computeRoundedMean(dataset, colname) :
+#
+# Compute rounded means for fields that cannot contain continuous values
+# To be used as a thresholds or mean
+#
+# INPUT: data Frame - refined dataset with no missing values
+#        column name of the field containing the values to be thransformed
+#
+# OUTPUT : threshold - the computed mean
+# 
+# ************************************************
 computeRoundedMean <- function(dataset, colname) {
-  #filtered_dataset <- dataset %>% filter(!is.na(filtered_dataset[colname, ]) & colname>=0 ) 
   columnIndex <- which(colnames(dataset) == colname)
   filtered_dataset <- dataset[!is.na(dataset[,columnIndex]), ]
   filtered_dataset <- filtered_dataset[filtered_dataset[,columnIndex]>=0, ]
   threshold <- round(mean(filtered_dataset[,columnIndex]))
   
   threshold;
-
 }
 
-
+# ************************************************
+# correlationAndCovarianceMatrix(dataset) :
+#
+# Correlation and Covariance matrices for numeric fields
+# 
+#
+# INPUT: data Frame - refined dataset with no missing values
+#
+#
+# OUTPUT: Correlation and Covariance matrices displayed in the console
+# 
+# ************************************************
 correlationAndCovarianceMatrix <- function(dataset) {
   
   # Dataset for Correlation Matrix
@@ -77,14 +108,21 @@ correlationAndCovarianceMatrix <- function(dataset) {
   
 }
 
-#Input dataset must only contain fields of numeric type with removed NA values
+# ************************************************
+# transformNumeric(dataset) :
+#
+# Check data types, remove outliers from numeric data and transform them with feature scaling
+#
+# INPUT: data Frame - refined dataset that must only contain fields of numeric type with removed missing values
+#
+# OUTPUT : transformed data Frame, ready for modelling and further transformation
+# 
+# ************************************************
 transformNumeric <- function(dataset) {
   
   field_types<-NPREPROCESSING_initialFieldType(dataset)
   
-  # ************************************************
   # View the field types on the console
-  
   numeric_fields<-names(dataset)[field_types=="NUMERIC"]
   print(paste("NUMERIC FIELDS=",length(numeric_fields)))
   print(numeric_fields)
@@ -93,9 +131,7 @@ transformNumeric <- function(dataset) {
   print(paste("SYMBOLIC FIELDS=",length(symbolic_fields)))
   print(symbolic_fields)
   
-  # ************************************************
   # Determine if the numeric fields might be discreet numeric
-  
   field_types1<-NPREPROCESSING_discreetNumeric(dataset=dataset,
                                                field_types=field_types,
                                                cutoff=DISCREET_BINS)
@@ -107,22 +143,29 @@ transformNumeric <- function(dataset) {
   numerics<-data.frame(dataset[,which(field_types==TYPE_NUMERIC)])
   
   # Test if any values are outliers and replace with mean values
-  # Null hyposis is there are no outliers
-  # We reject this if the p-value<significance (i.e. 0.05), confidence=95%
   numerics<-NPREPROCESSING_outlier(ordinals=numerics,confidence=OUTLIER_CONF)
  
   colnames <- c(colnames(numerics))
-
   
-  # ************************************************
   # z-scale
-  #zscaled<-as.data.frame(scale(perps_preprocessed,center=TRUE, scale=TRUE))
   scaled <- as.data.frame(scale(numerics,center=TRUE, scale=TRUE))
   ReadyforML<-Nrescaleentireframe(scaled)
   as.data.frame(ReadyforML)
 
 }
 
+# ************************************************
+# oneHotEncoding(attacks) :
+#
+# Correlation and Covariance matrices for numeric fields
+# 
+#
+# INPUT: data Frame - refined dataset with no missing values
+#
+#
+# OUTPUT: one-hot-encoded categorical fields
+# 
+# ************************************************
 oneHotEncoding <- function (attacks) {
   
   field_types<-NPREPROCESSING_initialFieldType(attacks)
@@ -150,5 +193,3 @@ oneHotEncoding <- function (attacks) {
   
   catagoricalReadyforML
 }
-
-
